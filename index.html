@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Games — เกมห้องเรียน by Fortal Interactive</title>
+<meta name="description" content="เกมการศึกษาสำหรับห้องเรียน เปิดบน Smart TV หรือ Projector ครูคุมเกม นักเรียนแข่งกันเป็นทีม">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN SYSTEM ──
+   Style: Vibrant & Block-based (Dark Space)
+   Palette: Deep space + neon purple + gold accents
+   Typography: Prompt (Thai-friendly)
+   Effects: Animated stars, glassmorphism cards, hover glow
+*/
+:root {
+  --bg: #0A0A1F;
+  --bg-card: rgba(22, 22, 70, 0.6);
+  --bg-card-hover: rgba(30, 30, 90, 0.8);
+  --text: #E2E8F0;
+  --text-dim: #94A3B8;
+  --purple: #7C3AED;
+  --purple-light: #A78BFA;
+  --gold: #FBBF24;
+  --rose: #F43F5E;
+  --cyan: #22D3EE;
+  --green: #4ADE80;
+  --orange: #FB923C;
+  --radius: 20px;
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Prompt', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ── STARS CANVAS ── */
+#stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── NEBULA GLOW ── */
+.nebula {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+.nebula-1 { width: 600px; height: 600px; background: var(--purple); top: -200px; right: -200px; }
+.nebula-2 { width: 500px; height: 500px; background: var(--rose); bottom: -150px; left: -150px; }
+.nebula-3 { width: 400px; height: 400px; background: var(--cyan); top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.08; }
+
+/* ── LAYOUT ── */
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── HERO ── */
+.hero {
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px 40px;
+  position: relative;
+  z-index: 1;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 100px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--purple-light);
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+.hero-badge svg { flex-shrink: 0; }
+.hero-title {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #FFFFFF 0%, var(--gold) 50%, var(--orange) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: clamp(16px, 2.5vw, 22px);
+  color: var(--text-dim);
+  max-width: 600px;
+  font-weight: 300;
+  margin-bottom: 32px;
+}
+.hero-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.stat {
+  text-align: center;
+}
+.stat-num {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 900;
+  color: var(--gold);
+}
+.stat-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* ── SECTION ── */
+.section {
+  padding: 40px 0 60px;
+  position: relative;
+  z-index: 1;
+}
+.section-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.section-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.section-desc {
+  color: var(--text-dim);
+  font-size: clamp(14px, 2vw, 18px);
+}
+
+/* ── GAME CARDS ── */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+.game-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  padding: 32px 28px 28px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--card-accent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.game-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px var(--card-glow);
+  background: var(--bg-card-hover);
+}
+.game-card:hover::before { opacity: 1; }
+.game-card:focus-visible {
+  outline: 2px solid var(--purple-light);
+  outline-offset: 4px;
+}
+
+/* Card icon */
+.card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  background: var(--card-icon-bg);
+  flex-shrink: 0;
+}
+.card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Card content */
+.card-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-subtitle {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+  font-weight: 400;
+}
+.card-desc {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.65;
+  flex: 1;
+  margin-bottom: 18px;
+}
+
+/* Tags */
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+
+/* Play button */
+.card-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-accent);
+  color: #FFF;
+  font-family: 'Prompt', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.15s;
+  align-self: flex-start;
+}
+.card-play:hover { filter: brightness(1.15); }
+.card-play:active { transform: scale(0.97); }
+.card-play svg { width: 18px; height: 18px; }
+
+/* Card-specific accent colors */
+.game-card.wr { --card-accent: #22D3EE; --card-glow: rgba(34,211,238,0.1); --card-icon-bg: rgba(34,211,238,0.12); }
+.game-card.tc { --card-accent: #F97316; --card-glow: rgba(249,115,22,0.1); --card-icon-bg: rgba(249,115,22,0.12); }
+.game-card.rl { --card-accent: #A855F7; --card-glow: rgba(168,85,247,0.1); --card-icon-bg: rgba(168,85,247,0.12); }
+
+/* ── HOW IT WORKS ── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-top: 8px;
+}
+.step {
+  text-align: center;
+  padding: 24px 16px;
+}
+.step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.15);
+  border: 2px solid var(--purple);
+  color: var(--purple-light);
+  font-weight: 900;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.step-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.step-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center;
+  padding: 40px 24px 30px;
+  color: var(--text-dim);
+  font-size: 13px;
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.footer a {
+  color: var(--purple-light);
+  text-decoration: none;
+}
+.footer a:hover { text-decoration: underline; }
+.footer-brand {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+/* ── SCROLL INDICATOR ── */
+.scroll-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: scrollBounce 2s ease-in-out infinite;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+@keyframes scrollBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .hero { min-height: 40vh; padding: 40px 16px 30px; }
+  .hero-stats { gap: 20px; }
+  .games-grid { grid-template-columns: 1fr; }
+  .game-card { padding: 24px 20px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-card { transition: none !important; }
+  .scroll-hint { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<canvas id="stars"></canvas>
+
+<!-- Nebula glows -->
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-badge">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Fortal Interactive
+  </div>
+  <h1 class="hero-title">Classroom Games</h1>
+  <p class="hero-sub">เกมการศึกษาสำหรับห้องเรียน เปิดบน Smart TV หรือ Projector หน้าจอเดียว ครูคุมเกม นักเรียนแข่งกันเป็นทีม</p>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">3</div>
+      <div class="stat-label">เกม</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">2-4</div>
+      <div class="stat-label">ทีม</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">0</div>
+      <div class="stat-label">ติดตั้ง</div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+  </div>
+</section>
+
+<!-- ═══ GAMES ═══ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">เลือกเกม</h2>
+      <p class="section-desc">คลิกเพื่อเปิดเกม — ไม่ต้องติดตั้ง เปิดจากเบราว์เซอร์ได้เลย</p>
+    </div>
+
+    <div class="games-grid">
+
+      <!-- Word Runner -->
+      <a href="word-runner.html" class="game-card wr" aria-label="เล่นเกม Word Runner">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="card-title">Word Runner</div>
+        <div class="card-subtitle">วิ่งวิบาก ต่อศัพท์</div>
+        <p class="card-desc">แข่งต่อคำศัพท์ภาษาอังกฤษให้เร็วที่สุด เลือกตัวอักษรทีละตัวก่อนหมดเวลา ทีมที่ต่อคำได้มากที่สุดชนะ</p>
+        <div class="card-tags">
+          <span class="tag">2 ทีม</span>
+          <span class="tag">ภาษาอังกฤษ</span>
+          <span class="tag">คำศัพท์</span>
+          <span class="tag">Arcade</span>
+        </div>
+        <div class="card-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          เล่นเลย
+        </div>
+      </a>
+
+      <!-- Territory Conqueror -->
+      <a href="territory-conqueror.html" class="game-card tc" aria-label="เล่นเกม Territory Conqueror">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <div class="card-title">Territory Conqueror</div>
+        <div class="card-subtitle">ยึดป้อม ตอบคำถาม</div>
+        <p class="card-desc">ตอบคำถามให้ถูกเพื่อยึดครองช่องบนกระดาน ทีมที่ครองพื้นที่มากที่สุดเมื่อหมดเวลาจะเป็นผู้ชนะ</p>
+        <div class="card-tags">
+          <span class="tag">2-4 ทีม</span>
+          <span class="tag">กำหนดคำถามเอง</span>
+          <span class="tag">Strategy</span>
+          <span class="tag">Quiz</span>
+        </div>
+        <div class="card-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          เล่นเลย
+        </div>
+      </a>
+
+      <!-- Rocket Launch -->
+      <a href="rocket-launch.html" class="game-card rl" aria-label="เล่นเกม Rocket Launch">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+            <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+          </svg>
+        </div>
+        <div class="card-title">Rocket Launch</div>
+        <div class="card-subtitle">จรวดทะลุอวกาศ</div>
+        <p class="card-desc">ตอบคำถามแบบรัวเพื่อเติมเชื้อเพลิงให้จรวดพุ่งสูง ตอบถูกบินขึ้น ตอบผิดร่วงลง ทีมไหนถึงดวงจันทร์ก่อนชนะ</p>
+        <div class="card-tags">
+          <span class="tag">2 ทีม</span>
+          <span class="tag">คณิต</span>
+          <span class="tag">วิทย์</span>
+          <span class="tag">Rapid Fire</span>
+        </div>
+        <div class="card-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          เล่นเลย
+        </div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">วิธีใช้งาน</h2>
+      <p class="section-desc">เปิดเว็บ เลือกเกม เล่นได้ทันที</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">เปิดเว็บ</div>
+        <p class="step-desc">เปิดหน้านี้ผ่านเบราว์เซอร์บน Smart TV, Projector หรือคอมพิวเตอร์</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">เลือกเกม</div>
+        <p class="step-desc">คลิกเกมที่ต้องการ ตั้งค่าทีม เลือกชุดคำถาม กำหนดเวลา</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">ตั้งค่าทีม</div>
+        <p class="step-desc">ตั้งชื่อทีม เลือกจำนวนทีม เลือกชุดคำถามและเวลา</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">เล่นเลย!</div>
+        <p class="step-desc">กดเริ่มเกม ครูคุมจังหวะ นักเรียนแข่งกันตอบ สนุกทั้งห้อง</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-brand">Fortal Interactive</div>
+  <p>Classroom Games — เกมการศึกษาสำหรับห้องเรียน</p>
+  <p style="margin-top:8px">Made with care by <a href="https://github.com/poomxchapon" target="_blank" rel="noopener">@poomxchapon</a></p>
+</footer>
+
+<script>
+/* ═══ STARS ═══ */
+(function initStars() {
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  function resize() { c.width = innerWidth; c.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+  const stars = Array.from({ length: 180 }, () => ({
+    x: Math.random() * c.width,
+    y: Math.random() * c.height,
+    r: Math.random() * 1.8 + 0.3,
+    a: Math.random(),
+    s: (Math.random() * 0.012 + 0.002) * (Math.random() < 0.5 ? 1 : -1),
+  }));
+  (function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a += s.s;
+      if (s.a > 1 || s.a < 0.1) s.s *= -1;
+      ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+})();
+</script>
+</body>
+</html>

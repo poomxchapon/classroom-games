@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Runner — วิ่งวิบาก ต่อศัพท์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0B0B2B;
+  --bg-card: #161650;
+  --team-l: #22D3EE;
+  --team-l-bg: #164E63;
+  --team-l-glow: rgba(34,211,238,0.35);
+  --team-r: #FB923C;
+  --team-r-bg: #7C2D12;
+  --team-r-glow: rgba(251,146,60,0.35);
+  --correct: #4ADE80;
+  --wrong: #F87171;
+  --gold: #FBBF24;
+  --text: #F1F5F9;
+  --text-dim: #94A3B8;
+  --grass1: #22C55E;
+  --grass2: #166534;
+  --radius: 18px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+button,input,textarea,select,option{font-family:'Prompt','Segoe UI',system-ui,-apple-system,sans-serif;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Prompt','Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);}
+canvas#stars{position:fixed;inset:0;z-index:0;pointer-events:none;}
+#app{position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
+.screen{display:none;flex-direction:column;width:100%;height:100%;animation:fadeIn .4s ease-out;}
+.screen.active{display:flex;}
+#screen-setup.active{height:auto;min-height:100%;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== SETUP SCREEN ===== */
+#screen-setup{padding:2vh 3vw 3vh;overflow-y:auto;align-items:center;gap:2vh;}
+.setup-title{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:900;text-align:center;background:linear-gradient(135deg,var(--team-l),var(--gold),var(--team-r));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;line-height:1.2;animation:titleBounce 2s ease-in-out infinite;}
+@keyframes titleBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+.setup-subtitle{font-size:clamp(1.2rem,2.5vw,2rem);color:var(--text-dim);text-align:center;margin-top:-0.5vh;}
+.setup-body{display:flex;flex-wrap:wrap;gap:2vw;width:100%;max-width:1400px;justify-content:center;}
+.setup-col{flex:1;min-width:280px;max-width:500px;display:flex;flex-direction:column;gap:1.5vh;overflow:hidden;}
+.card{background:var(--bg-card);border-radius:var(--radius);padding:clamp(12px,2vh,24px) clamp(16px,2vw,28px);border:2px solid rgba(255,255,255,0.06);overflow:hidden;}
+.card h3{font-size:clamp(1.1rem,2vw,1.5rem);margin-bottom:1vh;display:flex;align-items:center;gap:8px;}
+.team-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;overflow:hidden;}
+.emoji-pick{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.emoji-pick button{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.emoji-pick button:hover{background:rgba(255,255,255,0.15);transform:scale(1.1);}
+.emoji-display{font-size:clamp(2.5rem,4.5vw,4rem);line-height:1;cursor:default;transition:transform .2s;user-select:none;flex-shrink:0;}
+.team-name-input{flex:1;min-width:0;font-size:clamp(1.1rem,1.8vw,1.5rem);padding:8px 14px;border-radius:12px;border:2px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text);font-weight:700;outline:none;transition:border-color .2s;}
+.team-name-input:focus{border-color:var(--team-l);}
+.team-name-input.right:focus{border-color:var(--team-r);}
+.word-area textarea{width:100%;min-height:120px;font-size:clamp(1rem,1.5vw,1.25rem);padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.6;transition:border-color .2s;}
+.word-area textarea:focus{border-color:var(--gold);}
+.word-area textarea::placeholder{color:rgba(255,255,255,0.25);}
+.pack-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.pack-btn{padding:10px 18px;border-radius:30px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:clamp(0.9rem,1.3vw,1.1rem);cursor:pointer;transition:all .2s;white-space:nowrap;font-weight:600;}
+.pack-btn:hover{background:rgba(255,255,255,0.15);transform:scale(1.05);border-color:var(--gold);}
+.timer-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.timer-row label{font-size:clamp(1rem,1.5vw,1.2rem);font-weight:600;}
+.timer-row select{font-size:clamp(1rem,1.5vw,1.2rem);padding:8px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.12);background:var(--bg-card);color:var(--text);cursor:pointer;outline:none;}
+/* SVG Start Button (Gemini design) */
+.svg-btn-container{position:relative;display:flex;justify-content:center;align-items:center;margin-top:2vh;flex-shrink:0;}
+.game-svg{cursor:pointer;overflow:visible;animation:svgFloat 3s ease-in-out infinite;-webkit-tap-highlight-color:transparent;width:clamp(280px,30vw,420px);height:auto;}
+.game-svg:hover .svg-btn-group{transform:scale(1.05) rotate(-2deg);}
+.game-svg:active .svg-btn-group{transform:scale(0.95) translateY(5px);}
+.svg-btn-group{transition:transform 0.2s cubic-bezier(0.175,0.885,0.32,1.275);transform-origin:160px 50px;}
+.svg-btn-content{transition:all 0.3s ease;transform-origin:160px 50px;}
+@keyframes svgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.game-svg.is-starting{animation:svgPulse 1.5s infinite;pointer-events:none;}
+.game-svg.is-starting .svg-btn-bg{fill:url(#bgGradStart);}
+.game-svg.is-starting .svg-btn-content{opacity:0;transform:translateY(-30px) scale(0.8);}
+.game-svg.is-starting .svg-loading-dots{opacity:1;}
+.game-svg.is-starting .sd1{animation:svgDotBounce 0.5s infinite alternate;}
+.game-svg.is-starting .sd2{animation:svgDotBounce 0.5s 0.15s infinite alternate;}
+.game-svg.is-starting .sd3{animation:svgDotBounce 0.5s 0.3s infinite alternate;}
+@keyframes svgDotBounce{0%{transform:translateY(0)}100%{transform:translateY(-12px)}}
+@keyframes svgPulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+.btn-confetti{position:absolute;width:12px;height:12px;border-radius:50%;pointer-events:none;z-index:-1;}
+details{margin-top:4px;}
+details summary{cursor:pointer;color:var(--text-dim);font-size:0.95rem;padding:6px 0;}
+details textarea{width:100%;min-height:60px;margin-top:6px;font-size:0.9rem;padding:8px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:monospace;resize:vertical;outline:none;}
+.import-btn{margin-top:6px;padding:8px 20px;border-radius:20px;border:none;background:var(--team-l-bg);color:var(--team-l);font-weight:700;cursor:pointer;font-size:0.95rem;}
+.error-msg{color:var(--wrong);font-weight:700;font-size:1.1rem;text-align:center;min-height:1.5em;}
+
+/* ===== GAME SCREEN ===== */
+#screen-game{padding:0.8vh 1.5vw 1.2vh;gap:0.6vh;}
+.game-header{display:flex;justify-content:space-between;align-items:center;padding:0 1vw;font-size:clamp(1rem,1.8vw,1.4rem);font-weight:700;flex-shrink:0;}
+.game-header .word-counter{color:var(--gold);}
+.game-header .timer-display{font-size:clamp(1.3rem,2.5vw,2rem);color:var(--wrong);font-variant-numeric:tabular-nums;min-width:80px;text-align:center;}
+.game-header .timer-display.safe{color:var(--correct);}
+
+/* Track */
+.track-container{flex-shrink:0;border-radius:var(--radius);overflow:hidden;position:relative;height:clamp(140px,22vh,220px);background:linear-gradient(180deg,#0F172A 0%,#1E3A5F 40%,var(--grass2) 40%,var(--grass2) 100%);border:3px solid rgba(255,255,255,0.08);}
+.track-ground{position:absolute;bottom:0;left:0;right:0;height:12%;background:linear-gradient(0deg,#78350F,#92400E);border-top:3px solid #A16207;}
+.lane{position:absolute;left:0;right:0;height:40%;display:flex;align-items:center;padding:0 2%;}
+.lane-top{top:15%;}
+.lane-bottom{top:52%;}
+.lane-bg{position:absolute;inset:0;opacity:0.12;border-radius:8px;}
+.lane-top .lane-bg{background:var(--team-l);}
+.lane-bottom .lane-bg{background:var(--team-r);}
+.lane-divider{position:absolute;left:2%;right:2%;top:50%;height:3px;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.3) 0,rgba(255,255,255,0.3) 20px,transparent 20px,transparent 40px);}
+.finish-line{position:absolute;right:3%;top:8%;bottom:8%;width:clamp(30px,3vw,50px);background:repeating-conic-gradient(#000 0% 25%,#fff 0% 50%) 0 0/20px 20px;border-radius:6px;z-index:2;display:flex;align-items:center;justify-content:center;font-size:clamp(1.5rem,3vw,2.5rem);}
+.character{position:absolute;font-size:clamp(2.5rem,5vw,4rem);transition:left 0.6s cubic-bezier(0.34,1.56,0.64,1);z-index:3;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));line-height:1;}
+.character.running{animation:charRun 0.3s ease-in-out 3;}
+.character.stumble{animation:charStumble 0.5s ease-out;}
+@keyframes charRun{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-12px) rotate(5deg)}}
+@keyframes charStumble{0%{transform:rotate(0)}20%{transform:rotate(-25deg) translateY(5px)}50%{transform:rotate(15deg) translateY(8px)}80%{transform:rotate(-8deg)}100%{transform:rotate(0)}}
+.lane-score{position:absolute;right:clamp(60px,8vw,100px);font-size:clamp(1.2rem,2.2vw,1.8rem);font-weight:900;z-index:2;text-shadow:0 2px 8px rgba(0,0,0,0.6);display:flex;align-items:center;gap:6px;}
+.lane-top .lane-score{color:var(--team-l);}
+.lane-bottom .lane-score{color:var(--team-r);}
+.lane-name{position:absolute;left:clamp(60px,8vw,100px);font-size:clamp(0.9rem,1.5vw,1.2rem);font-weight:700;z-index:2;color:rgba(255,255,255,0.7);text-shadow:0 1px 4px rgba(0,0,0,0.8);}
+.decorations{position:absolute;bottom:12%;left:0;right:0;height:15%;pointer-events:none;z-index:1;overflow:hidden;}
+.deco-item{position:absolute;bottom:0;font-size:clamp(1rem,1.5vw,1.4rem);opacity:0.6;}
+
+/* Hint & Word */
+.hint-area{text-align:center;flex-shrink:0;padding:0.5vh 2vw;}
+.hint-bubble{display:inline-block;background:var(--bg-card);border:2px solid rgba(255,255,255,0.1);border-radius:40px;padding:clamp(8px,1.2vh,16px) clamp(20px,3vw,40px);font-size:clamp(1.2rem,2.2vw,1.8rem);max-width:90%;}
+.hint-label{color:var(--gold);font-weight:800;margin-right:8px;}
+.word-slots{display:flex;justify-content:center;gap:clamp(6px,1vw,14px);flex-wrap:wrap;padding:0.5vh 2vw;flex-shrink:0;}
+.slot{width:clamp(48px,6vw,80px);height:clamp(56px,7vw,90px);background:var(--bg-card);border:3px solid rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:clamp(1.8rem,3.5vw,3rem);font-weight:900;transition:all .3s;position:relative;}
+.slot.filled{border-color:var(--correct);background:rgba(74,222,128,0.1);color:var(--correct);animation:slotPop .35s cubic-bezier(0.34,1.56,0.64,1);}
+.slot.current{border-color:var(--gold);box-shadow:0 0 20px rgba(251,191,36,0.3);animation:slotPulse 1s ease-in-out infinite;}
+@keyframes slotPop{0%{transform:scale(0.5)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes slotPulse{0%,100%{box-shadow:0 0 15px rgba(251,191,36,0.2)}50%{box-shadow:0 0 30px rgba(251,191,36,0.5)}}
+
+/* Status */
+.status-bar{text-align:center;font-size:clamp(1.2rem,2vw,1.6rem);font-weight:800;min-height:clamp(30px,4vh,44px);display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;}
+.status-bar.select-team{color:var(--gold);}
+.status-bar.pick-letter{color:#C084FC;}
+.status-bar .team-indicator{display:inline-flex;align-items:center;gap:6px;padding:4px 16px;border-radius:30px;font-size:clamp(1.1rem,1.8vw,1.5rem);}
+.status-bar .team-indicator.left{background:var(--team-l-bg);color:var(--team-l);}
+.status-bar .team-indicator.right{background:var(--team-r-bg);color:var(--team-r);}
+
+/* Scrambled Letters */
+.scrambled-area{display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(8px,1.2vw,16px);padding:0.5vh 3vw;flex-shrink:0;}
+.letter-btn{width:clamp(60px,8vw,100px);height:clamp(60px,8vw,100px);border-radius:50%;border:3px solid rgba(255,255,255,0.2);background:var(--bg-card);color:var(--text);font-size:clamp(1.6rem,3vw,2.8rem);font-weight:900;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s;position:relative;user-select:none;}
+.letter-btn:hover:not(.used):not(.disabled){transform:scale(1.1);border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);}
+.letter-btn:active:not(.used):not(.disabled){transform:scale(0.93);}
+.letter-btn .num{position:absolute;top:2px;right:6px;font-size:clamp(0.6rem,0.9vw,0.85rem);color:var(--text-dim);font-weight:600;}
+.letter-btn.used{opacity:0.15;pointer-events:none;transform:scale(0.85);}
+.letter-btn.correct-flash{background:var(--correct)!important;border-color:var(--correct)!important;color:#fff!important;animation:btnCorrect .4s ease-out;}
+.letter-btn.wrong-flash{background:var(--wrong)!important;border-color:var(--wrong)!important;color:#fff!important;animation:btnWrong .4s ease-out;}
+.letter-btn.disabled{opacity:0.25;pointer-events:none;}
+@keyframes btnCorrect{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes btnWrong{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+/* Color rotation for letter buttons */
+.letter-btn:nth-child(6n+1){border-color:rgba(251,191,36,0.4);}
+.letter-btn:nth-child(6n+2){border-color:rgba(74,222,128,0.4);}
+.letter-btn:nth-child(6n+3){border-color:rgba(251,146,60,0.4);}
+.letter-btn:nth-child(6n+4){border-color:rgba(192,132,252,0.4);}
+.letter-btn:nth-child(6n+5){border-color:rgba(34,211,238,0.4);}
+.letter-btn:nth-child(6n+6){border-color:rgba(248,113,113,0.4);}
+
+/* Team Buttons */
+.team-buttons{display:flex;justify-content:center;gap:clamp(16px,3vw,40px);padding:0.5vh 3vw 0.8vh;flex-shrink:0;margin-top:auto;}
+.team-btn{flex:1;max-width:400px;min-height:clamp(56px,8vh,88px);border-radius:var(--radius);border:4px solid;font-size:clamp(1.4rem,2.5vw,2rem);font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:clamp(8px,1vw,16px);transition:all .2s;position:relative;overflow:hidden;}
+.team-btn.left{background:var(--team-l-bg);border-color:var(--team-l);color:var(--team-l);}
+.team-btn.right{background:var(--team-r-bg);border-color:var(--team-r);color:var(--team-r);}
+.team-btn:hover:not(.disabled):not(.stunned){transform:scale(1.04);filter:brightness(1.2);}
+.team-btn:active:not(.disabled):not(.stunned){transform:scale(0.96);}
+.team-btn .btn-emoji{font-size:clamp(2rem,3.5vw,3rem);}
+.team-btn.disabled{opacity:0.2;pointer-events:none;}
+.team-btn.active-team{box-shadow:0 0 30px var(--team-l-glow);animation:teamGlow 1s ease-in-out infinite alternate;}
+.team-btn.right.active-team{box-shadow:0 0 30px var(--team-r-glow);}
+@keyframes teamGlow{from{filter:brightness(1)}to{filter:brightness(1.25)}}
+.team-btn.stunned{opacity:0.35;pointer-events:none;}
+.stun-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:clamp(2rem,4vw,3.5rem);border-radius:inherit;pointer-events:none;color:#fff;}
+
+/* ===== RESULT SCREEN ===== */
+#screen-result{align-items:center;justify-content:center;gap:3vh;padding:4vh 4vw;text-align:center;}
+.result-emoji{font-size:clamp(5rem,12vw,10rem);animation:resultBounce 1s ease-in-out infinite;}
+@keyframes resultBounce{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.1) rotate(3deg)}}
+.result-title{font-size:clamp(2.5rem,6vw,5rem);font-weight:900;}
+.result-title.left{color:var(--team-l);}
+.result-title.right{color:var(--team-r);}
+.result-title.tie{background:linear-gradient(90deg,var(--team-l),var(--team-r));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.result-scores{display:flex;gap:clamp(20px,4vw,60px);justify-content:center;align-items:end;}
+.result-team{text-align:center;}
+.result-team .r-emoji{font-size:clamp(3rem,6vw,5rem);}
+.result-team .r-name{font-size:clamp(1.2rem,2vw,1.6rem);font-weight:700;margin:8px 0;}
+.result-team .r-score{font-size:clamp(2.5rem,5vw,4rem);font-weight:900;}
+.result-team.left .r-score{color:var(--team-l);}
+.result-team.right .r-score{color:var(--team-r);}
+.result-team.winner{transform:scale(1.15);}
+.result-vs{font-size:clamp(1.5rem,3vw,2.5rem);font-weight:900;color:var(--text-dim);align-self:center;}
+.btn-again{padding:clamp(12px,2vh,20px) clamp(30px,5vw,60px);font-size:clamp(1.3rem,2.5vw,2rem);font-weight:800;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,var(--gold),#F59E0B);color:#1a1a2e;box-shadow:0 4px 20px rgba(251,191,36,0.4);transition:all .2s;}
+.btn-again:hover{transform:scale(1.06);box-shadow:0 6px 30px rgba(251,191,36,0.6);}
+
+/* Overlay */
+#overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(11,11,43,0.85);backdrop-filter:blur(6px);}
+#overlay.active{display:flex;}
+.overlay-content{text-align:center;animation:overlayPop .4s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes overlayPop{from{transform:scale(0.3);opacity:0}to{transform:scale(1);opacity:1}}
+.overlay-big{font-size:clamp(6rem,15vw,12rem);font-weight:900;line-height:1;}
+.overlay-text{font-size:clamp(2rem,4vw,3.5rem);font-weight:800;margin-top:1vh;}
+
+/* Confetti */
+#confetti{position:fixed;inset:0;z-index:99;pointer-events:none;overflow:hidden;}
+.confetti-piece{position:absolute;width:12px;height:12px;top:-20px;animation:confettiFall linear forwards;}
+@keyframes confettiFall{to{top:110vh;transform:rotate(720deg)}}
+
+/* Responsive */
+@media(max-height:700px){
+  .track-container{height:120px;}
+  .character{font-size:2rem!important;}
+  .slot{width:44px;height:50px;font-size:1.6rem;}
+  .letter-btn{width:54px;height:54px;font-size:1.4rem;}
+  .team-btn{min-height:56px;}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important;}
+}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div id="app">
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-title">Word Runner</div>
+  <div class="setup-subtitle">วิ่งวิบาก ต่อศัพท์</div>
+  <div class="setup-body">
+    <!-- Left team config -->
+    <div class="setup-col">
+      <div class="card" style="border-color:rgba(34,211,238,0.25)">
+        <h3><span style="color:var(--team-l)">ทีมซ้าย</span></h3>
+        <div class="team-head">
+          <div class="emoji-pick">
+            <button onclick="cycleEmoji('left',-1)" aria-label="Previous emoji">&#9664;</button>
+            <div class="emoji-display" id="emoji-left">&#x1F431;</div>
+            <button onclick="cycleEmoji('left',1)" aria-label="Next emoji">&#9654;</button>
+          </div>
+          <input type="text" class="team-name-input" id="name-left" value="ทีมฟ้า" maxlength="12">
+        </div>
+      </div>
+      <!-- Words input -->
+      <div class="card word-area">
+        <h3>&#x1F4DD; ใส่คำศัพท์</h3>
+        <div style="color:var(--text-dim);font-size:0.95rem;margin-bottom:6px;">
+          พิมพ์ทีละบรรทัด: <strong>คำ|คำใบ้</strong>
+        </div>
+        <textarea id="word-input" rows="6" placeholder="dog|สัตว์เห่าได้&#10;cat|สัตว์จับหนู&#10;bird|สัตว์บินได้"></textarea>
+        <div class="pack-btns">
+          <button class="pack-btn" onclick="loadPack('animals')">&#x1F43E; Animals</button>
+          <button class="pack-btn" onclick="loadPack('fruits')">&#x1F34E; ผลไม้</button>
+          <button class="pack-btn" onclick="loadPack('colors')">&#x1F308; Colors</button>
+          <button class="pack-btn" onclick="loadPack('body')">&#x1F9B6; Body</button>
+        </div>
+        <details>
+          <summary>&#x1F4CB; Import JSON</summary>
+          <textarea id="json-input" rows="3" placeholder='[{"word":"dog","hint":"สัตว์เห่าได้"}]'></textarea>
+          <button class="import-btn" onclick="importJSON()">Import</button>
+        </details>
+      </div>
+    </div>
+    <!-- Right team config -->
+    <div class="setup-col">
+      <div class="card" style="border-color:rgba(251,146,60,0.25)">
+        <h3><span style="color:var(--team-r)">ทีมขวา</span></h3>
+        <div class="team-head">
+          <div class="emoji-pick">
+            <button onclick="cycleEmoji('right',-1)" aria-label="Previous emoji">&#9664;</button>
+            <div class="emoji-display" id="emoji-right">&#x1F436;</div>
+            <button onclick="cycleEmoji('right',1)" aria-label="Next emoji">&#9654;</button>
+          </div>
+          <input type="text" class="team-name-input right" id="name-right" value="ทีมส้ม" maxlength="12">
+        </div>
+      </div>
+      <!-- Timer & Options -->
+      <div class="card">
+        <h3>&#x2699;&#xFE0F; ตั้งค่า</h3>
+        <div class="timer-row">
+          <label>&#x23F1; เวลาต่อคำ:</label>
+          <select id="timer-select">
+            <option value="0">ไม่จำกัด</option>
+            <option value="30">30 วินาที</option>
+            <option value="45" selected>45 วินาที</option>
+            <option value="60">60 วินาที</option>
+            <option value="90">90 วินาที</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="error-msg" id="setup-error"></div>
+  <div class="svg-btn-container">
+    <svg id="gameBtn" class="game-svg" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" onclick="startGame()">
+      <defs>
+        <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD54F"/>
+          <stop offset="100%" stop-color="#FF8F00"/>
+        </linearGradient>
+        <linearGradient id="bgGradStart" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#81C784"/>
+          <stop offset="100%" stop-color="#388E3C"/>
+        </linearGradient>
+        <filter id="btnShadow" x="-10%" y="-10%" width="120%" height="130%">
+          <feDropShadow dx="0" dy="12" stdDeviation="0" flood-color="#D84315"/>
+        </filter>
+        <filter id="btnTextShadow" x="-10%" y="-10%" width="120%" height="130%">
+          <feDropShadow dx="2" dy="2" stdDeviation="0" flood-color="#D84315"/>
+        </filter>
+      </defs>
+      <g class="svg-btn-group">
+        <rect class="svg-btn-bg" x="10" y="10" width="300" height="80" rx="40" fill="url(#bgGrad)" filter="url(#btnShadow)" stroke="#FFF" stroke-width="6"/>
+        <g class="svg-btn-content">
+          <path d="M 85 32 L 85 68 L 115 50 Z" fill="#FFF" filter="url(#btnTextShadow)"/>
+          <text x="135" y="62" font-family="'Prompt',sans-serif" font-size="34" font-weight="600" fill="#FFF" letter-spacing="1" filter="url(#btnTextShadow)">เริ่มเกม!</text>
+        </g>
+        <g class="svg-loading-dots" opacity="0" transform="translate(160, 55)">
+          <circle class="sd1" cx="-30" cy="0" r="10" fill="#FFF" filter="url(#btnTextShadow)"/>
+          <circle class="sd2" cx="0" cy="0" r="10" fill="#FFF" filter="url(#btnTextShadow)"/>
+          <circle class="sd3" cx="30" cy="0" r="10" fill="#FFF" filter="url(#btnTextShadow)"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div id="screen-game" class="screen">
+  <!-- Header -->
+  <div class="game-header">
+    <div class="word-counter" id="word-counter">คำที่ 1/5</div>
+    <div class="timer-display safe" id="timer-display"></div>
+  </div>
+  <!-- Track -->
+  <div class="track-container">
+    <div class="lane lane-top">
+      <div class="lane-bg"></div>
+      <div class="character" id="char-left" style="left:2%">&#x1F431;</div>
+      <div class="lane-name" id="lane-name-left">ทีมฟ้า</div>
+      <div class="lane-score" id="lane-score-left">0</div>
+    </div>
+    <div class="lane-divider"></div>
+    <div class="lane lane-bottom">
+      <div class="lane-bg"></div>
+      <div class="character" id="char-right" style="left:2%">&#x1F436;</div>
+      <div class="lane-name" id="lane-name-right">ทีมส้ม</div>
+      <div class="lane-score" id="lane-score-right">0</div>
+    </div>
+    <div class="finish-line">&#x1F3C1;</div>
+    <div class="decorations" id="decorations"></div>
+    <div class="track-ground"></div>
+  </div>
+  <!-- Hint -->
+  <div class="hint-area">
+    <div class="hint-bubble">
+      <span class="hint-label">&#x1F4A1; คำใบ้:</span>
+      <span id="hint-text">...</span>
+    </div>
+  </div>
+  <!-- Word Slots -->
+  <div class="word-slots" id="word-slots"></div>
+  <!-- Status -->
+  <div class="status-bar select-team" id="status-bar">&#x1F514; เลือกทีมที่ยกมือก่อน!</div>
+  <!-- Scrambled Letters -->
+  <div class="scrambled-area" id="scrambled-area"></div>
+  <!-- Team Buttons -->
+  <div class="team-buttons" id="team-buttons">
+    <button class="team-btn left" id="btn-left" onclick="selectTeam('left')">
+      <span class="btn-emoji" id="btn-emoji-left">&#x1F431;</span>
+      <span id="btn-name-left">ทีมฟ้า</span>
+    </button>
+    <button class="team-btn right" id="btn-right" onclick="selectTeam('right')">
+      <span class="btn-emoji" id="btn-emoji-right">&#x1F436;</span>
+      <span id="btn-name-right">ทีมส้ม</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== RESULT SCREEN ===== -->
+<div id="screen-result" class="screen">
+  <div class="result-emoji" id="result-emoji">&#x1F3C6;</div>
+  <div class="result-title" id="result-title">ชนะ!</div>
+  <div class="result-scores">
+    <div class="result-team left" id="r-team-left">
+      <div class="r-emoji" id="r-emoji-left">&#x1F431;</div>
+      <div class="r-name" id="r-name-left">ทีมฟ้า</div>
+      <div class="r-score" id="r-score-left">0</div>
+    </div>
+    <div class="result-vs">VS</div>
+    <div class="result-team right" id="r-team-right">
+      <div class="r-emoji" id="r-emoji-right">&#x1F436;</div>
+      <div class="r-name" id="r-name-right">ทีมส้ม</div>
+      <div class="r-score" id="r-score-right">0</div>
+    </div>
+  </div>
+  <button class="btn-again" onclick="backToSetup()">&#x1F504; เล่นอีกครั้ง</button>
+</div>
+</div>
+
+<!-- Overlay -->
+<div id="overlay"><div class="overlay-content"><div class="overlay-big" id="overlay-big"></div><div class="overlay-text" id="overlay-text"></div></div></div>
+<!-- Confetti -->
+<div id="confetti"></div>
+
+<script>
+/* ============================================================
+   WORD RUNNER — วิ่งวิบาก ต่อศัพท์
+   Single-file classroom game for Smart TV / Projector
+   ============================================================ */
+
+// ─── CONSTANTS ───
+const EMOJIS_L = ['\u{1F431}','\u{1F430}','\u{1F98A}','\u{1F43B}','\u{1F981}','\u{1F43C}'];
+const EMOJIS_R = ['\u{1F436}','\u{1F438}','\u{1F42F}','\u{1F984}','\u{1F428}','\u{1F427}'];
+const SAMPLE_PACKS = {
+  animals: [
+    {word:'DOG',hint:'สัตว์เลี้ยง เห่า โฮ่ง! \u{1F415}'},
+    {word:'CAT',hint:'สัตว์เลี้ยง ร้อง เมี้ยว! \u{1F408}'},
+    {word:'BIRD',hint:'มีปีก บินได้ \u{1F426}'},
+    {word:'FISH',hint:'อยู่ในน้ำ ว่ายน้ำเก่ง \u{1F41F}'},
+    {word:'BEAR',hint:'ตัวใหญ่ อ้วน อยู่ในป่า \u{1F43B}'},
+    {word:'LION',hint:'ราชาแห่งป่า \u{1F981}'},
+  ],
+  fruits: [
+    {word:'ส้ม',hint:'ผลไม้สีส้ม เปรี้ยวอร่อย \u{1F34A}'},
+    {word:'กล้วย',hint:'สีเหลือง ยาวๆ ลิงชอบกิน \u{1F34C}'},
+    {word:'แตงโม',hint:'ลูกใหญ่ เนื้อสีแดง หวานฉ่ำ \u{1F349}'},
+    {word:'องุ่น',hint:'เม็ดเล็กๆ เป็นพวง \u{1F347}'},
+    {word:'มะม่วง',hint:'หวาน สีเหลือง ผลไม้ไทย \u{1F96D}'},
+    {word:'ชมพู่',hint:'กรอบๆ รูปร่างเหมือนระฆัง \u{1F514}'},
+  ],
+  colors: [
+    {word:'RED',hint:'สีของหัวใจ \u{2764}\u{FE0F}'},
+    {word:'BLUE',hint:'สีของท้องฟ้า \u{1F499}'},
+    {word:'GREEN',hint:'สีของใบไม้ \u{1F49A}'},
+    {word:'PINK',hint:'สีชมพู ดอกซากุระ \u{1F338}'},
+    {word:'SUN',hint:'ดวงอาทิตย์ สว่างจ้า \u{2600}\u{FE0F}'},
+  ],
+  body: [
+    {word:'EYE',hint:'ใช้มอง อยู่บนใบหน้า \u{1F441}\u{FE0F}'},
+    {word:'NOSE',hint:'ใช้ดมกลิ่น อยู่กลางหน้า \u{1F443}'},
+    {word:'HAND',hint:'ใช้จับของ มี 5 นิ้ว \u{270B}'},
+    {word:'FOOT',hint:'ใช้เดิน อยู่ล่างสุด \u{1F9B6}'},
+    {word:'EAR',hint:'ใช้ฟังเสียง อยู่ข้างหัว \u{1F442}'},
+    {word:'HEAD',hint:'ส่วนบนสุดของร่างกาย \u{1F9D1}'},
+  ],
+};
+const DECO_ITEMS = ['\u{1F33F}','\u{1F33B}','\u{1F344}','\u{1F33E}','\u{1F33A}','\u{1F490}','\u{1F337}','\u{1F332}'];
+
+// ─── STATE ───
+let G = {
+  phase: 'setup', // setup | countdown | selectTeam | pickLetter | animating | wordComplete | gameOver
+  teams: {
+    left:  { name:'ทีมฟ้า', emoji:EMOJIS_L[0], emojiIdx:0, score:0, stunned:false, stunTimer:null },
+    right: { name:'ทีมส้ม', emoji:EMOJIS_R[0], emojiIdx:0, score:0, stunned:false, stunTimer:null },
+  },
+  words: [],
+  wordIdx: 0,
+  letterIdx: 0, // next letter to fill
+  scrambled: [], // [{char, used}]
+  activeTeam: null, // 'left'|'right'
+  timerPerWord: 45,
+  timerRemaining: 0,
+  timerInterval: null,
+  finishLine: 0,
+  totalLetters: 0,
+};
+
+// ─── AUDIO ENGINE (Web Audio API) ───
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playTone(freq, dur, type='sine', vol=0.18) {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = type;
+  o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+function sfxCorrect() {
+  const t = audioCtx ? audioCtx.currentTime : 0;
+  ensureAudio();
+  [523,659,784].forEach((f,i) => {
+    setTimeout(() => playTone(f, 0.25, 'sine', 0.2), i * 80);
+  });
+}
+function sfxWrong() {
+  ensureAudio();
+  playTone(200, 0.35, 'sawtooth', 0.15);
+  setTimeout(() => playTone(150, 0.3, 'sawtooth', 0.12), 120);
+}
+function sfxClick() { ensureAudio(); playTone(880, 0.08, 'sine', 0.1); }
+function sfxWordComplete() {
+  ensureAudio();
+  [523,659,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.3, 'sine', 0.2), i * 100));
+}
+function sfxCountdown() { ensureAudio(); playTone(440, 0.15, 'square', 0.12); }
+function sfxGo() {
+  ensureAudio();
+  [523,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.2, 'sine', 0.22), i * 60));
+}
+function sfxWin() {
+  ensureAudio();
+  const melody = [523,587,659,784,880,1047];
+  melody.forEach((f,i) => setTimeout(() => playTone(f, 0.4, 'sine', 0.2), i * 120));
+}
+function sfxTick() { ensureAudio(); playTone(1000, 0.05, 'sine', 0.08); }
+
+// ─── BUTTON CONFETTI (Gemini design) ───
+function createBtnConfetti() {
+  const container = document.querySelector('.svg-btn-container');
+  if (!container) return;
+  const colors = ['#FFEA00','#FF4081','#00E5FF','#76FF03','#FFFFFF','#FB923C','#22D3EE'];
+  for (let i = 0; i < 20; i++) {
+    const conf = document.createElement('div');
+    conf.className = 'btn-confetti';
+    container.appendChild(conf);
+    conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    conf.style.left = '50%';
+    conf.style.top = '50%';
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = 80 + Math.random() * 120;
+    const tx = Math.cos(angle) * velocity;
+    const ty = Math.sin(angle) * velocity - 50;
+    conf.animate([
+      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
+    ], {
+      duration: 600 + Math.random() * 400,
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+    }).onfinish = () => conf.remove();
+  }
+}
+
+// ─── STARS BACKGROUND ───
+function initStars() {
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  const stars = Array.from({length:150}, () => ({
+    x: Math.random() * c.width,
+    y: Math.random() * c.height,
+    r: Math.random() * 1.8 + 0.3,
+    a: Math.random(),
+    s: (Math.random() * 0.015 + 0.003) * (Math.random() < 0.5 ? 1 : -1),
+  }));
+  (function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a += s.s;
+      if (s.a > 1 || s.a < 0.1) s.s *= -1;
+      ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+}
+
+// ─── DECORATIONS ───
+function renderDecorations() {
+  const el = document.getElementById('decorations');
+  el.innerHTML = '';
+  for (let i = 0; i < 14; i++) {
+    const d = document.createElement('span');
+    d.className = 'deco-item';
+    d.textContent = DECO_ITEMS[i % DECO_ITEMS.length];
+    d.style.left = (5 + i * 7 + Math.random() * 3) + '%';
+    d.style.opacity = 0.3 + Math.random() * 0.4;
+    el.appendChild(d);
+  }
+}
+
+// ─── EMOJI PICKER ───
+function cycleEmoji(side, dir) {
+  sfxClick();
+  const list = side === 'left' ? EMOJIS_L : EMOJIS_R;
+  const t = G.teams[side];
+  t.emojiIdx = (t.emojiIdx + dir + list.length) % list.length;
+  t.emoji = list[t.emojiIdx];
+  document.getElementById('emoji-' + side).textContent = t.emoji;
+}
+
+// ─── SAMPLE PACKS ───
+function loadPack(name) {
+  sfxClick();
+  const pack = SAMPLE_PACKS[name];
+  if (!pack) return;
+  const ta = document.getElementById('word-input');
+  ta.value = pack.map(w => w.word + '|' + w.hint).join('\n');
+}
+function importJSON() {
+  sfxClick();
+  try {
+    const data = JSON.parse(document.getElementById('json-input').value.trim());
+    if (!Array.isArray(data)) throw 'Not array';
+    const ta = document.getElementById('word-input');
+    ta.value = data.map(w => (w.word||w.q) + '|' + (w.hint||w.choices?.join(',') || '')).join('\n');
+    document.getElementById('setup-error').textContent = '\u{2705} Import สำเร็จ ' + data.length + ' คำ';
+  } catch(e) {
+    document.getElementById('setup-error').textContent = '\u{274C} JSON ไม่ถูกต้อง';
+  }
+}
+
+// ─── PARSE WORDS ───
+function parseWords() {
+  const raw = document.getElementById('word-input').value.trim();
+  if (!raw) return [];
+  return raw.split('\n').map(line => {
+    const parts = line.split('|');
+    const word = (parts[0] || '').trim().toUpperCase();
+    const hint = (parts[1] || '').trim() || '\u{1F914}';
+    return word ? { word, hint, letters: [...word] } : null;
+  }).filter(Boolean);
+}
+
+// ─── SHUFFLE (Fisher-Yates) ───
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ─── SCREEN MANAGEMENT ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ─── OVERLAY ───
+function showOverlay(big, text, duration) {
+  const ov = document.getElementById('overlay');
+  document.getElementById('overlay-big').textContent = big;
+  document.getElementById('overlay-text').textContent = text;
+  ov.classList.add('active');
+  if (duration) setTimeout(() => ov.classList.remove('active'), duration);
+}
+function hideOverlay() { document.getElementById('overlay').classList.remove('active'); }
+
+// ─── START GAME ───
+function startGame() {
+  ensureAudio();
+  const words = parseWords();
+  if (words.length === 0) {
+    document.getElementById('setup-error').textContent = '\u{274C} กรุณาใส่คำศัพท์อย่างน้อย 1 คำ';
+    return;
+  }
+  document.getElementById('setup-error').textContent = '';
+
+  // SVG button loading animation + confetti burst
+  const svgBtn = document.getElementById('gameBtn');
+  if (svgBtn.classList.contains('is-starting')) return;
+  svgBtn.classList.add('is-starting');
+  sfxClick();
+  createBtnConfetti();
+
+  setTimeout(() => {
+  svgBtn.classList.remove('is-starting');
+
+  // Read settings
+  G.teams.left.name = document.getElementById('name-left').value.trim() || 'ทีมฟ้า';
+  G.teams.right.name = document.getElementById('name-right').value.trim() || 'ทีมส้ม';
+  G.timerPerWord = parseInt(document.getElementById('timer-select').value) || 0;
+  G.words = words;
+  G.wordIdx = 0;
+  G.teams.left.score = 0;
+  G.teams.right.score = 0;
+  G.teams.left.stunned = false;
+  G.teams.right.stunned = false;
+  G.activeTeam = null;
+  G.totalLetters = words.reduce((s, w) => s + w.letters.length, 0);
+  G.finishLine = Math.ceil(G.totalLetters * 0.55);
+
+  // Setup game screen labels
+  document.getElementById('char-left').textContent = G.teams.left.emoji;
+  document.getElementById('char-right').textContent = G.teams.right.emoji;
+  document.getElementById('lane-name-left').textContent = G.teams.left.emoji + ' ' + G.teams.left.name;
+  document.getElementById('lane-name-right').textContent = G.teams.right.emoji + ' ' + G.teams.right.name;
+  document.getElementById('btn-emoji-left').textContent = G.teams.left.emoji;
+  document.getElementById('btn-emoji-right').textContent = G.teams.right.emoji;
+  document.getElementById('btn-name-left').textContent = G.teams.left.name;
+  document.getElementById('btn-name-right').textContent = G.teams.right.name;
+
+  renderDecorations();
+  updateTrack();
+  showScreen('game');
+
+  // Countdown 3-2-1-GO
+  G.phase = 'countdown';
+  let count = 3;
+  showOverlay(count, 'เตรียมตัว...');
+  sfxCountdown();
+  const cdInterval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      showOverlay(count, 'เตรียมตัว...');
+      sfxCountdown();
+    } else if (count === 0) {
+      showOverlay('GO!', '\u{1F3C3} วิ่ง!');
+      sfxGo();
+    } else {
+      clearInterval(cdInterval);
+      hideOverlay();
+      loadWord(0);
+    }
+  }, 800);
+  }, 1200); // end button loading animation delay
+}
+
+// ─── LOAD WORD ───
+function loadWord(idx) {
+  G.wordIdx = idx;
+  G.letterIdx = 0;
+  const w = G.words[idx];
+  G.scrambled = shuffle(w.letters.map((ch, i) => ({ ch, origIdx: i, used: false })));
+
+  // Update header
+  document.getElementById('word-counter').textContent = 'คำที่ ' + (idx+1) + '/' + G.words.length;
+  document.getElementById('hint-text').textContent = w.hint;
+
+  // Render word slots
+  renderSlots();
+  renderScrambled();
+  enterSelectTeam();
+  startWordTimer();
+}
+
+// ─── RENDER WORD SLOTS ───
+function renderSlots() {
+  const container = document.getElementById('word-slots');
+  const w = G.words[G.wordIdx];
+  container.innerHTML = '';
+  w.letters.forEach((ch, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (i < G.letterIdx ? ' filled' : '') + (i === G.letterIdx ? ' current' : '');
+    slot.textContent = i < G.letterIdx ? ch : '';
+    slot.id = 'slot-' + i;
+    container.appendChild(slot);
+  });
+}
+
+// ─── RENDER SCRAMBLED ───
+function renderScrambled() {
+  const container = document.getElementById('scrambled-area');
+  container.innerHTML = '';
+  G.scrambled.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'letter-btn' + (item.used ? ' used' : '') + (G.phase !== 'pickLetter' ? ' disabled' : '');
+    btn.innerHTML = '<span class="num">' + (i+1) + '</span>' + item.ch;
+    btn.onclick = () => pickLetter(i);
+    btn.id = 'lbtn-' + i;
+    container.appendChild(btn);
+  });
+}
+
+// ─── ENTER SELECT TEAM ───
+function enterSelectTeam() {
+  G.phase = 'selectTeam';
+  G.activeTeam = null;
+  updateTeamButtons();
+  updateLetterButtons();
+  document.getElementById('status-bar').className = 'status-bar select-team';
+  document.getElementById('status-bar').innerHTML = '\u{1F514} เลือกทีมที่ยกมือก่อน!';
+}
+
+// ─── SELECT TEAM ───
+function selectTeam(side) {
+  if (G.phase !== 'selectTeam') return;
+  if (G.teams[side].stunned) return;
+  sfxClick();
+  G.activeTeam = side;
+  G.phase = 'pickLetter';
+  updateTeamButtons();
+  updateLetterButtons();
+  const t = G.teams[side];
+  const colorClass = side === 'left' ? 'left' : 'right';
+  document.getElementById('status-bar').className = 'status-bar pick-letter';
+  document.getElementById('status-bar').innerHTML =
+    '<span class="team-indicator ' + colorClass + '">' + t.emoji + ' ' + t.name + '</span> เลือกตัวอักษร!';
+}
+
+// ─── PICK LETTER ───
+function pickLetter(scrambledIdx) {
+  if (G.phase !== 'pickLetter') return;
+  if (G.scrambled[scrambledIdx].used) return;
+
+  const picked = G.scrambled[scrambledIdx];
+  const expected = G.words[G.wordIdx].letters[G.letterIdx];
+  const btn = document.getElementById('lbtn-' + scrambledIdx);
+
+  if (picked.ch === expected) {
+    // ─── CORRECT ───
+    sfxCorrect();
+    picked.used = true;
+    btn.classList.add('correct-flash');
+
+    // Fill slot
+    const slot = document.getElementById('slot-' + G.letterIdx);
+    slot.textContent = expected;
+    slot.className = 'slot filled';
+
+    G.teams[G.activeTeam].score++;
+    G.letterIdx++;
+    updateTrack();
+
+    // Check win
+    if (G.teams[G.activeTeam].score >= G.finishLine) {
+      setTimeout(() => endGame(), 500);
+      return;
+    }
+
+    // Check word complete
+    if (G.letterIdx >= G.words[G.wordIdx].letters.length) {
+      G.phase = 'animating';
+      clearWordTimer();
+      setTimeout(() => wordComplete(), 600);
+      return;
+    }
+
+    // Highlight next slot
+    const nextSlot = document.getElementById('slot-' + G.letterIdx);
+    if (nextSlot) nextSlot.className = 'slot current';
+
+    // Stay in pickLetter, same team continues
+    setTimeout(() => {
+      btn.classList.remove('correct-flash');
+      btn.classList.add('used');
+      updateLetterButtons();
+    }, 350);
+
+  } else {
+    // ─── WRONG ───
+    sfxWrong();
+    btn.classList.add('wrong-flash');
+    G.phase = 'animating';
+
+    // Stumble character
+    const charEl = document.getElementById('char-' + G.activeTeam);
+    charEl.classList.add('stumble');
+    setTimeout(() => charEl.classList.remove('stumble'), 500);
+
+    // Stun active team
+    const stunnedSide = G.activeTeam;
+    stunTeam(stunnedSide, 3000);
+
+    setTimeout(() => {
+      btn.classList.remove('wrong-flash');
+      // Auto-switch to other team (steal!)
+      const other = stunnedSide === 'left' ? 'right' : 'left';
+      if (!G.teams[other].stunned) {
+        // Show steal banner
+        document.getElementById('status-bar').className = 'status-bar pick-letter';
+        document.getElementById('status-bar').innerHTML =
+          '\u{1F504} STEAL! <span class="team-indicator ' + other + '">' +
+          G.teams[other].emoji + ' ' + G.teams[other].name + '</span> ได้สิทธิ์!';
+        G.activeTeam = other;
+        G.phase = 'pickLetter';
+        updateTeamButtons();
+        updateLetterButtons();
+      } else {
+        // Both stunned — wait
+        enterSelectTeam();
+      }
+    }, 600);
+  }
+}
+
+// ─── STUN TEAM ───
+function stunTeam(side, ms) {
+  const t = G.teams[side];
+  t.stunned = true;
+  if (t.stunTimer) clearTimeout(t.stunTimer);
+
+  updateTeamButtons();
+
+  // Show countdown on button
+  const btnEl = document.getElementById('btn-' + side);
+  let overlay = btnEl.querySelector('.stun-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'stun-overlay';
+    btnEl.appendChild(overlay);
+  }
+  let remaining = Math.ceil(ms / 1000);
+  overlay.textContent = remaining;
+  overlay.style.display = 'flex';
+
+  const countInterval = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      overlay.textContent = remaining;
+    } else {
+      clearInterval(countInterval);
+    }
+  }, 1000);
+
+  t.stunTimer = setTimeout(() => {
+    t.stunned = false;
+    t.stunTimer = null;
+    overlay.style.display = 'none';
+    clearInterval(countInterval);
+    updateTeamButtons();
+  }, ms);
+}
+
+// ─── WORD COMPLETE ───
+function wordComplete() {
+  sfxWordComplete();
+  clearWordTimer();
+
+  // Bonus animation
+  showOverlay('\u{1F389}', 'สะกดสำเร็จ!', 1500);
+
+  // Add running animation to both characters
+  const charL = document.getElementById('char-left');
+  const charR = document.getElementById('char-right');
+  charL.classList.add('running');
+  charR.classList.add('running');
+  setTimeout(() => { charL.classList.remove('running'); charR.classList.remove('running'); }, 900);
+
+  setTimeout(() => {
+    // Next word or game over
+    if (G.wordIdx + 1 >= G.words.length) {
+      endGame();
+    } else {
+      loadWord(G.wordIdx + 1);
+    }
+  }, 1800);
+}
+
+// ─── WORD TIMER ───
+function startWordTimer() {
+  clearWordTimer();
+  const display = document.getElementById('timer-display');
+  if (G.timerPerWord <= 0) {
+    display.textContent = '';
+    return;
+  }
+  G.timerRemaining = G.timerPerWord;
+  display.textContent = G.timerRemaining;
+  display.className = 'timer-display safe';
+
+  G.timerInterval = setInterval(() => {
+    G.timerRemaining--;
+    display.textContent = G.timerRemaining;
+    if (G.timerRemaining <= 10) {
+      display.className = 'timer-display';
+      sfxTick();
+    }
+    if (G.timerRemaining <= 0) {
+      clearWordTimer();
+      // Time's up — skip to next word
+      G.phase = 'animating';
+      showOverlay('\u{23F0}', 'หมดเวลา!', 1500);
+      setTimeout(() => {
+        if (G.wordIdx + 1 >= G.words.length) {
+          endGame();
+        } else {
+          loadWord(G.wordIdx + 1);
+        }
+      }, 1800);
+    }
+  }, 1000);
+}
+function clearWordTimer() {
+  if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
+}
+
+// ─── UPDATE TRACK ───
+function updateTrack() {
+  const maxPos = 88; // max left% (leave room for finish)
+  ['left','right'].forEach(side => {
+    const pct = Math.min(G.teams[side].score / G.finishLine, 1);
+    const pos = 2 + pct * maxPos;
+    document.getElementById('char-' + side).style.left = pos + '%';
+    document.getElementById('lane-score-' + side).textContent = '\u{2B50} ' + G.teams[side].score;
+
+    // Add running animation
+    const charEl = document.getElementById('char-' + side);
+    charEl.classList.add('running');
+    setTimeout(() => charEl.classList.remove('running'), 600);
+  });
+}
+
+// ─── UPDATE BUTTONS ───
+function updateTeamButtons() {
+  ['left','right'].forEach(side => {
+    const btn = document.getElementById('btn-' + side);
+    btn.classList.remove('active-team','disabled','stunned');
+    if (G.phase === 'selectTeam') {
+      if (G.teams[side].stunned) btn.classList.add('stunned');
+    } else if (G.phase === 'pickLetter') {
+      if (side === G.activeTeam) btn.classList.add('active-team');
+      else btn.classList.add('disabled');
+    } else {
+      btn.classList.add('disabled');
+    }
+  });
+}
+function updateLetterButtons() {
+  document.querySelectorAll('.letter-btn').forEach((btn, i) => {
+    btn.classList.remove('disabled');
+    if (G.phase !== 'pickLetter') btn.classList.add('disabled');
+  });
+}
+
+// ─── END GAME ───
+function endGame() {
+  G.phase = 'gameOver';
+  clearWordTimer();
+  // Clear stuns
+  ['left','right'].forEach(side => {
+    if (G.teams[side].stunTimer) clearTimeout(G.teams[side].stunTimer);
+    G.teams[side].stunned = false;
+  });
+  hideOverlay();
+
+  const scoreL = G.teams.left.score;
+  const scoreR = G.teams.right.score;
+  let winner = scoreL > scoreR ? 'left' : scoreR > scoreL ? 'right' : 'tie';
+
+  // Setup result screen
+  document.getElementById('r-emoji-left').textContent = G.teams.left.emoji;
+  document.getElementById('r-emoji-right').textContent = G.teams.right.emoji;
+  document.getElementById('r-name-left').textContent = G.teams.left.name;
+  document.getElementById('r-name-right').textContent = G.teams.right.name;
+  document.getElementById('r-score-left').textContent = '\u{2B50} ' + scoreL;
+  document.getElementById('r-score-right').textContent = '\u{2B50} ' + scoreR;
+
+  const rTeamL = document.getElementById('r-team-left');
+  const rTeamR = document.getElementById('r-team-right');
+  rTeamL.classList.remove('winner'); rTeamR.classList.remove('winner');
+
+  const titleEl = document.getElementById('result-title');
+  titleEl.className = 'result-title';
+  const emojiEl = document.getElementById('result-emoji');
+
+  if (winner === 'left') {
+    titleEl.textContent = G.teams.left.name + ' ชนะ!';
+    titleEl.classList.add('left');
+    emojiEl.textContent = '\u{1F3C6}';
+    rTeamL.classList.add('winner');
+  } else if (winner === 'right') {
+    titleEl.textContent = G.teams.right.name + ' ชนะ!';
+    titleEl.classList.add('right');
+    emojiEl.textContent = '\u{1F3C6}';
+    rTeamR.classList.add('winner');
+  } else {
+    titleEl.textContent = 'เสมอกัน!';
+    titleEl.classList.add('tie');
+    emojiEl.textContent = '\u{1F91D}';
+  }
+
+  showScreen('result');
+  sfxWin();
+  launchConfetti(winner === 'left' ? 'var(--team-l)' : winner === 'right' ? 'var(--team-r)' : null);
+}
+
+// ─── CONFETTI ───
+function launchConfetti() {
+  const container = document.getElementById('confetti');
+  container.innerHTML = '';
+  const colors = ['#22D3EE','#FB923C','#4ADE80','#FBBF24','#F87171','#C084FC','#F472B6','#34D399'];
+  for (let i = 0; i < 80; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.width = (6 + Math.random() * 10) + 'px';
+    piece.style.height = (6 + Math.random() * 10) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.animationDuration = (2 + Math.random() * 3) + 's';
+    piece.style.animationDelay = Math.random() * 2 + 's';
+    piece.style.opacity = 0.7 + Math.random() * 0.3;
+    container.appendChild(piece);
+  }
+  setTimeout(() => container.innerHTML = '', 6000);
+}
+
+// ─── BACK TO SETUP ───
+function backToSetup() {
+  sfxClick();
+  G.phase = 'setup';
+  clearWordTimer();
+  showScreen('setup');
+}
+
+// ─── KEYBOARD SHORTCUTS ───
+document.addEventListener('keydown', (e) => {
+  if (G.phase === 'selectTeam') {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { selectTeam('left'); e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { selectTeam('right'); e.preventDefault(); }
+  }
+  if (G.phase === 'pickLetter') {
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 9) {
+      const idx = num - 1;
+      if (idx < G.scrambled.length && !G.scrambled[idx].used) {
+        pickLetter(idx);
+      }
+      e.preventDefault();
+    }
+  }
+  // Escape back to setup
+  if (e.key === 'Escape' && G.phase !== 'setup' && G.phase !== 'countdown') {
+    if (confirm('กลับหน้าตั้งค่า?')) backToSetup();
+  }
+});
+
+// ─── INIT ───
+window.addEventListener('DOMContentLoaded', () => {
+  initStars();
+});
+</script>
+</body>
+</html>

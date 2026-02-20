@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Territory Conqueror — ยึดป้อม ตอบคำถาม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0B0B2B;
+  --bg-card: #161650;
+  --bg-card2: #1E1E5A;
+  --text: #F1F5F9;
+  --text-dim: #94A3B8;
+  --gold: #FBBF24;
+  --correct: #4ADE80;
+  --wrong: #F87171;
+  --radius: 16px;
+  --team1: #3B82F6; --team1-bg: #1E3A5F;
+  --team2: #F97316; --team2-bg: #7C2D12;
+  --team3: #22C55E; --team3-bg: #14532D;
+  --team4: #A855F7; --team4-bg: #581C87;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { touch-action: manipulation; } /* Fix #10: eliminate 300ms tap delay on touch */
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  font-family: 'Prompt', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+canvas#stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#confetti { position: fixed; inset: 0; z-index: 99; pointer-events: none; overflow: hidden; }
+.confetti-piece { position: absolute; width: 12px; height: 12px; top: -20px; animation: confettiFall linear forwards; }
+@keyframes confettiFall { to { top: 110vh; transform: rotate(720deg); } }
+
+/* ===== Screens ===== */
+.screen { display: none; flex-direction: column; align-items: center; width: 100%; height: 100%; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+/* ===== SETUP SCREEN ===== */
+#screen-setup { justify-content: center; gap: 18px; padding: 20px; }
+#screen-setup h1 { font-size: clamp(28px, 4vw, 52px); font-weight: 900; background: linear-gradient(135deg, var(--gold), #FF8F00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: none; }
+#screen-setup h1 span { display: block; font-size: 0.45em; font-weight: 400; -webkit-text-fill-color: var(--text-dim); }
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: min(700px, 90vw);
+}
+.setup-card {
+  background: var(--bg-card);
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.setup-card h3 { font-size: 14px; color: var(--gold); margin-bottom: 10px; font-weight: 600; }
+.setup-card label { font-size: 13px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+.setup-card select, .setup-card input, .setup-card textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Prompt', sans-serif;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.setup-card textarea { height: 120px; resize: vertical; font-size: 12px; }
+.setup-card select option { background: var(--bg); }
+.team-name-inputs { display: flex; flex-direction: column; gap: 6px; }
+.team-name-row { display: flex; align-items: center; gap: 8px; }
+.team-name-row .team-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+.team-name-row input { flex: 1; }
+
+.setup-full { grid-column: 1 / -1; }
+
+/* SVG Start Button */
+.svg-btn-container { position: relative; display: flex; justify-content: center; margin-top: 8px; animation: svgFloat 3s ease-in-out infinite; }
+.svg-btn-container:hover { animation-play-state: paused; }
+.game-svg { cursor: pointer; width: clamp(250px, 28vw, 380px); overflow: visible; }
+.svg-btn-container:hover .svg-btn-group { transform: scale(1.05) rotate(-2deg); }
+.svg-btn-container:active .svg-btn-group { transform: scale(0.95) translateY(5px); }
+.svg-btn-group { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.game-svg.is-starting { pointer-events: none; }
+.svg-btn-container:has(.is-starting) { animation: svgPulse 1.5s infinite; }
+.game-svg.is-starting .svg-btn-content { opacity: 0; transition: opacity 0.3s; }
+.game-svg.is-starting .svg-loading-dots { opacity: 1; transition: opacity 0.3s; }
+.btn-confetti { position: absolute; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; }
+@keyframes svgFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes svgPulse { 0%{transform:scale(1)} 50%{transform:scale(1.02)} 100%{transform:scale(1)} }
+@keyframes svgDotBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.sd1 { animation: svgDotBounce 0.6s ease-in-out infinite; }
+.sd2 { animation: svgDotBounce 0.6s ease-in-out 0.15s infinite; }
+.sd3 { animation: svgDotBounce 0.6s ease-in-out 0.3s infinite; }
+
+/* Pack buttons */
+.pack-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pack-btn {
+  padding: 5px 12px; border-radius: 20px; border: 2px solid rgba(255,255,255,0.15);
+  background: transparent; color: var(--text-dim); font-family: 'Prompt'; font-size: 12px;
+  cursor: pointer; transition: all 0.2s;
+}
+.pack-btn:hover { border-color: var(--gold); color: var(--gold); }
+.pack-btn.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 600; }
+
+/* ===== GAME SCREEN ===== */
+#screen-game { padding: 0; }
+
+/* Score Bar */
+/* Fix #1: Score bar ใหญ่ขึ้นสำหรับ TV + Fix #8: Timer ใหญ่ขึ้น + Fix #12: Question counter */
+.score-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 24px;
+  background: rgba(0,0,0,0.5);
+  border-bottom: 2px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.score-teams { display: flex; gap: 12px; }
+.score-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  border-radius: 24px;
+  font-weight: 700;
+  font-size: clamp(18px, 2.5vw, 32px);
+  transition: all 0.3s;
+}
+.score-team .score-emoji { font-size: clamp(20px, 2.5vw, 34px); }
+.score-team.active-team { transform: scale(1.12); box-shadow: 0 0 24px rgba(255,255,255,0.3); }
+.score-info { display: flex; gap: 20px; align-items: center; font-size: clamp(16px, 2vw, 24px); color: var(--text-dim); }
+.score-info .timer { color: var(--gold); font-weight: 800; font-size: clamp(24px, 3vw, 42px); min-width: 50px; text-align: center; }
+.timer.warning { color: var(--wrong); animation: timerPulse 0.5s infinite; }
+@keyframes timerPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+
+/* Main Game Area */
+.game-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Hex Grid Area */
+.hex-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  min-height: 0;
+}
+#hexGrid {
+  max-width: 100%;
+  max-height: 100%;
+}
+.hex-cell { cursor: default; transition: all 0.3s; }
+.hex-cell polygon { transition: fill 0.3s, stroke 0.3s, stroke-width 0.3s; }
+.hex-cell.unclaimed polygon { fill: #2D2D4A; stroke: #4A4A6A; stroke-width: 2; }
+.hex-cell.choosable { cursor: pointer; }
+.hex-cell.choosable polygon { stroke: var(--gold); stroke-width: 3; animation: hexGlow 1s ease-in-out infinite alternate; }
+.hex-cell.choosable:hover polygon { fill: rgba(251,191,36,0.25); stroke-width: 4; }
+@keyframes hexGlow { from { filter: drop-shadow(0 0 4px rgba(251,191,36,0.3)); } to { filter: drop-shadow(0 0 12px rgba(251,191,36,0.7)); } }
+.hex-cell.claimed polygon { stroke-width: 2.5; }
+.hex-cell .hex-emoji { font-size: 20px; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+.hex-cell.claimed .hex-emoji { opacity: 1; }
+.hex-cell.just-claimed { animation: hexClaim 0.6s ease-out; }
+@keyframes hexClaim { 0%{transform:scale(0.5);opacity:0.5} 50%{transform:scale(1.2)} 100%{transform:scale(1);opacity:1} }
+
+/* Bottom Panel */
+/* Fix #6: Bottom panel compact + Fix #3: Choices hidden until buzz */
+.bottom-panel {
+  width: 100%;
+  background: rgba(0,0,0,0.5);
+  border-top: 2px solid rgba(255,255,255,0.08);
+  padding: 8px 24px 10px;
+  flex-shrink: 0;
+}
+.status-line {
+  text-align: center;
+  font-size: clamp(16px, 2vw, 24px);
+  color: var(--gold);
+  margin-bottom: 4px;
+  min-height: 30px;
+  font-weight: 600;
+}
+.question-text {
+  text-align: center;
+  font-size: clamp(18px, 2.5vw, 32px);
+  font-weight: 700;
+  margin-bottom: 8px;
+  min-height: 36px;
+  line-height: 1.3;
+}
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 900px;
+  margin: 0 auto 8px;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.choices.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; max-height: 0; overflow: hidden; margin: 0 auto; }
+.choice-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: 'Prompt';
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.choice-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--bg-card2); transform: scale(1.02); }
+.choice-btn:disabled { opacity: 0.5; cursor: default; }
+.choice-btn .choice-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.choice-btn.correct { border-color: var(--correct); background: rgba(74,222,128,0.15); }
+.choice-btn.correct .choice-label { background: var(--correct); color: #000; }
+.choice-btn.wrong-pick { border-color: var(--wrong); background: rgba(248,113,113,0.15); }
+.choice-btn.wrong-pick .choice-label { background: var(--wrong); color: #000; }
+
+/* Fix #2: Buzz buttons bigger + Fix #11: Better buzz feedback */
+.buzz-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.buzz-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  min-height: 56px;
+  border-radius: 16px;
+  border: 3px solid;
+  font-family: 'Prompt';
+  font-size: clamp(16px, 2vw, 24px);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #fff;
+}
+.buzz-btn:hover:not(:disabled) { transform: scale(1.08); filter: brightness(1.2); }
+.buzz-btn:active:not(:disabled) { transform: scale(0.95); }
+.buzz-btn:disabled { opacity: 0.3; cursor: default; filter: grayscale(0.5); }
+.buzz-btn.buzzing { animation: buzzPulse 0.4s ease-out; }
+.buzz-btn.active-buzz { animation: activeBuzzGlow 1s ease-in-out infinite alternate; transform: scale(1.1); }
+@keyframes buzzPulse { 0%{transform:scale(1)} 50%{transform:scale(1.15)} 100%{transform:scale(1)} }
+@keyframes activeBuzzGlow { from { box-shadow: 0 0 10px currentColor; } to { box-shadow: 0 0 25px currentColor, 0 0 50px currentColor; } }
+
+/* ===== OVERLAYS ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11,11,43,0.92);
+  backdrop-filter: blur(8px);
+}
+.overlay.active { display: flex; }
+.overlay-content { text-align: center; }
+
+/* Countdown */
+#countdown-text {
+  font-size: clamp(80px, 15vw, 200px);
+  font-weight: 900;
+  color: var(--gold);
+  text-shadow: 0 0 40px rgba(251,191,36,0.5);
+  animation: countPop 0.5s ease-out;
+}
+@keyframes countPop { 0%{transform:scale(2);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+/* Game Over */
+.gameover-content {
+  text-align: center;
+  padding: 40px;
+}
+.gameover-content h2 {
+  font-size: clamp(32px, 5vw, 64px);
+  font-weight: 900;
+  margin-bottom: 16px;
+}
+.gameover-content .winner-name {
+  font-size: clamp(24px, 4vw, 48px);
+  font-weight: 800;
+  margin-bottom: 24px;
+}
+.final-scores {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+.final-score-card {
+  padding: 16px 28px;
+  border-radius: 16px;
+  border: 3px solid;
+  text-align: center;
+  min-width: 120px;
+}
+.final-score-card .fs-emoji { font-size: 32px; }
+.final-score-card .fs-name { font-size: 16px; font-weight: 600; margin: 4px 0; }
+.final-score-card .fs-count { font-size: 36px; font-weight: 900; }
+.final-score-card.winner-card { transform: scale(1.15); box-shadow: 0 0 30px rgba(251,191,36,0.4); }
+
+.btn-restart {
+  padding: 14px 36px;
+  border-radius: 30px;
+  border: none;
+  background: linear-gradient(135deg, var(--gold), #FF8F00);
+  color: #000;
+  font-family: 'Prompt';
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-restart:hover { transform: scale(1.05); filter: brightness(1.1); }
+
+/* Result feedback overlay */
+.result-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.result-flash.active { display: flex; }
+.result-flash .result-icon {
+  font-size: clamp(60px, 12vw, 150px);
+  animation: resultPop 0.6s ease-out forwards;
+}
+@keyframes resultPop { 0%{transform:scale(0) rotate(-20deg);opacity:0} 50%{transform:scale(1.3) rotate(5deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:0} }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .setup-grid { grid-template-columns: 1fr; }
+  .choices { grid-template-columns: 1fr; }
+  .buzz-row { flex-wrap: wrap; }
+}
+
+/* Fix #4: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<div id="confetti"></div>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="screen-setup" class="screen active">
+  <h1>Territory Conqueror <span>ยึดป้อม ตอบคำถาม</span></h1>
+
+  <div class="setup-grid">
+    <!-- Teams -->
+    <div class="setup-card">
+      <h3>🏰 ทีม</h3>
+      <label>จำนวนทีม</label>
+      <select id="teamCount" onchange="updateTeamInputs()">
+        <option value="2">2 ทีม</option>
+        <option value="3" selected>3 ทีม</option>
+        <option value="4">4 ทีม</option>
+      </select>
+      <div id="teamNames" class="team-name-inputs"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="setup-card">
+      <h3>⚙️ ตั้งค่า</h3>
+      <label>ขนาดสนาม</label>
+      <select id="gridSize">
+        <option value="small">เล็ก (4×3 = 12 ช่อง)</option>
+        <option value="medium" selected>กลาง (5×4 = 20 ช่อง)</option>
+        <option value="large">ใหญ่ (6×5 = 30 ช่อง)</option>
+      </select>
+      <label>เวลาต่อข้อ (วินาที)</label>
+      <select id="timerSec">
+        <option value="15">15 วินาที</option>
+        <option value="20" selected>20 วินาที</option>
+        <option value="30">30 วินาที</option>
+        <option value="45">45 วินาที</option>
+        <option value="60">60 วินาที</option>
+      </select>
+    </div>
+
+    <!-- Questions -->
+    <div class="setup-card setup-full">
+      <h3>❓ คำถาม</h3>
+      <label>เลือกชุดคำถามสำเร็จรูป</label>
+      <div class="pack-btns">
+        <button class="pack-btn" onclick="loadPack('social', this)">🏛️ สังคม</button>
+        <button class="pack-btn" onclick="loadPack('science', this)">🔬 วิทย์</button>
+        <button class="pack-btn" onclick="loadPack('english', this)">🇬🇧 อังกฤษ</button>
+        <button class="pack-btn" onclick="loadPack('math', this)">🔢 คณิต</button>
+        <button class="pack-btn" onclick="loadPack('all', this)">📦 ทั้งหมด</button>
+      </div>
+      <label>หรือใส่เอง (บรรทัดละข้อ: คำถาม|ตัวเลือก1|ตัวเลือก2|ตัวเลือก3|ตัวเลือก4|เฉลย1-4)</label>
+      <textarea id="questionsRaw" placeholder="ดาวเคราะห์ใดใหญ่ที่สุด?|ดาวพฤหัส|ดาวเสาร์|ยูเรนัส|เนปจูน|1"></textarea>
+    </div>
+  </div>
+
+  <!-- Start Button -->
+  <div class="svg-btn-container">
+    <svg id="gameBtn" class="game-svg" viewBox="-20 -20 360 160" xmlns="http://www.w3.org/2000/svg" onclick="startGame()">
+      <defs>
+        <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD54F"/>
+          <stop offset="100%" stop-color="#FF8F00"/>
+        </linearGradient>
+        <filter id="btnShadow" x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0" dy="8" stdDeviation="0" flood-color="#D84315"/>
+        </filter>
+        <filter id="btnTextShadow" x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="1" flood-color="rgba(0,0,0,0.3)"/>
+        </filter>
+      </defs>
+      <g class="svg-btn-group" transform-origin="160 55">
+        <rect class="svg-btn-bg" x="10" y="10" width="300" height="80" rx="40" fill="url(#bgGrad)" filter="url(#btnShadow)" stroke="#FFF" stroke-width="5"/>
+        <g class="svg-btn-content">
+          <text x="160" y="62" font-family="'Prompt',sans-serif" font-size="32" font-weight="700" fill="#FFF" text-anchor="middle" letter-spacing="1" filter="url(#btnTextShadow)">⚔️ เริ่มเกม!</text>
+        </g>
+        <g class="svg-loading-dots" opacity="0" transform="translate(160, 55)">
+          <circle class="sd1" cx="-30" cy="0" r="8" fill="#FFF"/>
+          <circle class="sd2" cx="0" cy="0" r="8" fill="#FFF"/>
+          <circle class="sd3" cx="30" cy="0" r="8" fill="#FFF"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div id="screen-game" class="screen">
+  <!-- Score Bar -->
+  <div class="score-bar">
+    <div id="scoreTeams" class="score-teams"></div>
+    <div class="score-info">
+      <span id="qCounter">คำถาม 1/20</span>
+      <span id="timerDisplay" class="timer">20</span>
+    </div>
+  </div>
+
+  <!-- Main Area -->
+  <div class="game-main">
+    <div class="hex-area">
+      <svg id="hexGrid" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <!-- Bottom -->
+    <div class="bottom-panel">
+      <div id="statusLine" class="status-line"></div>
+      <div id="questionText" class="question-text"></div>
+      <div id="choices" class="choices"></div>
+      <div id="buzzRow" class="buzz-row"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COUNTDOWN OVERLAY ===== -->
+<div id="overlay-countdown" class="overlay">
+  <div class="overlay-content">
+    <div id="countdown-text">3</div>
+  </div>
+</div>
+
+<!-- ===== GAME OVER OVERLAY ===== -->
+<div id="overlay-gameover" class="overlay">
+  <div class="gameover-content">
+    <h2>🏆 จบเกม!</h2>
+    <div id="winnerName" class="winner-name"></div>
+    <div id="finalScores" class="final-scores"></div>
+    <button class="btn-restart" onclick="backToSetup()">🔄 เล่นอีกครั้ง</button>
+  </div>
+</div>
+
+<!-- ===== RESULT FLASH ===== -->
+<div id="resultFlash" class="result-flash">
+  <div id="resultIcon" class="result-icon"></div>
+</div>
+
+<script>
+/* ============================================================
+   Territory Conqueror — ยึดป้อม ตอบคำถาม
+   ============================================================ */
+
+// ===== TEAMS CONFIG =====
+const TEAMS_CONFIG = [
+  { color: '#3B82F6', bg: '#1E3A5F', name: 'ทีมฟ้า', emojis: ['🏰','🛡️','⚔️','🦁'] },
+  { color: '#F97316', bg: '#7C2D12', name: 'ทีมส้ม', emojis: ['🏯','🔥','🐉','🗡️'] },
+  { color: '#22C55E', bg: '#14532D', name: 'ทีมเขียว', emojis: ['🏹','🌿','🦊','🏔️'] },
+  { color: '#A855F7', bg: '#581C87', name: 'ทีมม่วง', emojis: ['🔮','⚡','🦉','🗼'] },
+];
+
+// ===== QUESTION PACKS =====
+const PACKS = {
+  social: [
+    'ประเทศไทยมีกี่จังหวัด?|76|77|75|78|2',
+    'แม่น้ำสายใดยาวที่สุดในโลก?|แม่น้ำไนล์|แม่น้ำอเมซอน|แม่น้ำแยงซี|แม่น้ำมิสซิสซิปปี|1',
+    'วันจักรี ตรงกับวันที่เท่าไร?|6 เมษายน|5 ธันวาคม|24 มิถุนายน|10 ธันวาคม|1',
+    'ทวีปใดมีพื้นที่ใหญ่ที่สุด?|เอเชีย|แอฟริกา|อเมริกาเหนือ|ยุโรป|1',
+    'ประเทศใดมีประชากรมากที่สุด?|อินเดีย|จีน|สหรัฐอเมริกา|อินโดนีเซีย|1',
+    'พ่อขุนรามคำแหง ทรงประดิษฐ์อะไร?|อักษรไทย|ปืนใหญ่|เรือสำเภา|จักรยาน|1',
+    'เมืองหลวงของญี่ปุ่นคือ?|โตเกียว|โอซาก้า|เกียวโต|ซัปโปโร|1',
+    'สงครามโลกครั้งที่ 2 สิ้นสุดเมื่อ ค.ศ. ใด?|1945|1944|1946|1943|1',
+  ],
+  science: [
+    'ดาวเคราะห์ดวงใดใหญ่ที่สุด?|ดาวพฤหัส|ดาวเสาร์|ยูเรนัส|เนปจูน|1',
+    'น้ำเดือดที่อุณหภูมิกี่องศาเซลเซียส?|100|90|110|80|1',
+    'ก๊าซใดมีมากที่สุดในบรรยากาศ?|ไนโตรเจน|ออกซิเจน|คาร์บอนไดออกไซด์|ฮีเลียม|1',
+    'DNA ย่อมาจากอะไร?|Deoxyribonucleic Acid|Dinitrogen Acid|Dynamic Nuclear Acid|Direct Nucleic Acid|1',
+    'แสงเดินทางด้วยความเร็วเท่าไร?|300,000 กม./วินาที|150,000 กม./วินาที|500,000 กม./วินาที|1,000,000 กม./วินาที|1',
+    'สัตว์ชนิดใดเป็นสัตว์เลี้ยงลูกด้วยนม?|โลมา|ฉลาม|จระเข้|เต่าทะเล|1',
+    'ธาตุใดมีสัญลักษณ์ O?|ออกซิเจน|ออสเมียม|ทอง|เงิน|1',
+    'อวัยวะใดทำหน้าที่กรองเลือด?|ไต|ตับ|ปอด|หัวใจ|1',
+  ],
+  english: [
+    'What is the past tense of "go"?|went|goed|gone|going|1',
+    '"Beautiful" มีกี่พยางค์?|3|2|4|5|1',
+    'คำใดเป็น noun?|Happiness|Run|Beautiful|Quickly|1',
+    'What is the opposite of "hot"?|Cold|Warm|Cool|Mild|1',
+    '"She ___ to school every day." เติมคำใด?|goes|go|going|gone|1',
+    'What does "enormous" mean?|Very big|Very small|Very fast|Very slow|1',
+    'Which word is an adjective?|Tall|Run|Slowly|Jump|1',
+    '"I have been waiting ___ 3 hours." เติมคำใด?|for|since|at|in|1',
+  ],
+  math: [
+    '7 × 8 = ?|56|54|48|64|1',
+    'รูปสามเหลี่ยมมีกี่ด้าน?|3|4|5|6|1',
+    '144 ÷ 12 = ?|12|11|13|14|1',
+    'ค่าของ π (พาย) โดยประมาณ?|3.14|2.14|3.41|4.13|1',
+    '2³ มีค่าเท่ากับ?|8|6|9|12|1',
+    'มุมฉากมีกี่องศา?|90|180|45|360|1',
+    '√49 = ?|7|6|8|9|1',
+    '1/2 + 1/4 = ?|3/4|2/4|1/3|2/6|1',
+  ],
+};
+
+// ===== GAME STATE =====
+let G = {
+  state: 'setup',
+  teams: [],
+  questions: [],
+  currentQ: 0,
+  grid: { cols: 5, rows: 4, cells: [] },
+  hexSize: 40,
+  timerMax: 20,
+  timerLeft: 20,
+  timerInterval: null,
+  buzzedTeam: null,
+  triedTeams: new Set(),
+  totalTiles: 20,
+};
+
+// ===== AUDIO =====
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playTone(freq, dur, type = 'sine', vol = 0.18) {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+function sfxBuzz() { playTone(600, 0.15, 'square', 0.2); setTimeout(() => playTone(800, 0.1, 'square', 0.15), 100); }
+function sfxCorrect() { playTone(523, 0.15); setTimeout(() => playTone(659, 0.15), 120); setTimeout(() => playTone(784, 0.2), 240); }
+function sfxWrong() { playTone(200, 0.3, 'sawtooth', 0.2); setTimeout(() => playTone(150, 0.4, 'sawtooth', 0.15), 200); }
+function sfxClaim() { playTone(880, 0.1); setTimeout(() => playTone(1047, 0.15), 80); setTimeout(() => playTone(1319, 0.2), 160); }
+function sfxCountdown() { playTone(440, 0.15, 'square', 0.15); }
+function sfxGo() { playTone(523, 0.1); setTimeout(() => playTone(784, 0.1), 80); setTimeout(() => playTone(1047, 0.2), 160); }
+function sfxWin() { [523,587,659,784,880,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.2), i * 120)); }
+function sfxTick() { playTone(1000, 0.05, 'sine', 0.08); }
+function sfxTimeUp() { playTone(300, 0.2, 'sawtooth', 0.15); setTimeout(() => playTone(250, 0.3, 'sawtooth', 0.12), 150); }
+function sfxSteal() { playTone(700, 0.08, 'square', 0.12); setTimeout(() => playTone(900, 0.08, 'square', 0.12), 80); setTimeout(() => playTone(700, 0.12, 'square', 0.1), 160); }
+
+// ===== STARS =====
+function initStars() {
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const stars = Array.from({ length: 150 }, () => ({
+    x: Math.random() * c.width, y: Math.random() * c.height,
+    r: Math.random() * 1.8 + 0.3, a: Math.random(),
+    s: (Math.random() * 0.015 + 0.003) * (Math.random() < 0.5 ? 1 : -1),
+  }));
+  (function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a += s.s; if (s.a > 1 || s.a < 0.1) s.s *= -1;
+      ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+}
+
+// ===== CONFETTI =====
+function launchConfetti() {
+  const container = document.getElementById('confetti');
+  container.innerHTML = '';
+  const colors = ['#22D3EE','#FB923C','#4ADE80','#FBBF24','#F87171','#C084FC','#F472B6','#34D399'];
+  for (let i = 0; i < 80; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.width = (6 + Math.random() * 10) + 'px';
+    p.style.height = (6 + Math.random() * 10) + 'px';
+    p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    p.style.animationDuration = (2 + Math.random() * 3) + 's';
+    p.style.animationDelay = Math.random() * 2 + 's';
+    p.style.opacity = 0.7 + Math.random() * 0.3;
+    container.appendChild(p);
+  }
+  setTimeout(() => container.innerHTML = '', 6000);
+}
+
+function createBtnConfetti() {
+  const container = document.querySelector('.svg-btn-container');
+  const colors = ['#FFEA00','#FF4081','#00E5FF','#76FF03','#FFFFFF','#FB923C','#22D3EE'];
+  for (let i = 0; i < 20; i++) {
+    const conf = document.createElement('div');
+    conf.className = 'btn-confetti';
+    container.appendChild(conf);
+    conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    conf.style.left = '50%'; conf.style.top = '50%';
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = 80 + Math.random() * 120;
+    const tx = Math.cos(angle) * velocity;
+    const ty = Math.sin(angle) * velocity - 50;
+    conf.animate([
+      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
+    ], { duration: 600 + Math.random() * 400, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }).onfinish = () => conf.remove();
+  }
+}
+
+// ===== SCREEN MANAGEMENT =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showOverlay(id) { document.getElementById(id).classList.add('active'); }
+function hideOverlay(id) { document.getElementById(id).classList.remove('active'); }
+
+// ===== RESULT FLASH =====
+function flashResult(emoji) {
+  const el = document.getElementById('resultFlash');
+  const icon = document.getElementById('resultIcon');
+  icon.textContent = emoji;
+  el.classList.add('active');
+  icon.style.animation = 'none'; icon.offsetHeight; icon.style.animation = '';
+  setTimeout(() => el.classList.remove('active'), 700);
+}
+
+// ===== SETUP =====
+function updateTeamInputs() {
+  const count = parseInt(document.getElementById('teamCount').value);
+  const container = document.getElementById('teamNames');
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const cfg = TEAMS_CONFIG[i];
+    container.innerHTML += `
+      <div class="team-name-row">
+        <div class="team-dot" style="background:${cfg.color}"></div>
+        <input type="text" id="teamName${i}" value="${cfg.name}" placeholder="ชื่อทีม ${i+1}">
+      </div>`;
+  }
+}
+
+function loadPack(pack, btnEl) {
+  document.querySelectorAll('.pack-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  let lines = [];
+  if (pack === 'all') {
+    Object.values(PACKS).forEach(p => lines.push(...p));
+  } else {
+    lines = PACKS[pack] || [];
+  }
+  // Shuffle
+  for (let i = lines.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lines[i], lines[j]] = [lines[j], lines[i]];
+  }
+  document.getElementById('questionsRaw').value = lines.join('\n');
+}
+
+function parseQuestions(raw) {
+  return raw.trim().split('\n').filter(l => l.trim()).map(line => {
+    const parts = line.split('|');
+    if (parts.length < 6) return null;
+    return {
+      question: parts[0].trim(),
+      choices: [parts[1].trim(), parts[2].trim(), parts[3].trim(), parts[4].trim()],
+      answer: parseInt(parts[5].trim()) - 1,
+    };
+  }).filter(Boolean);
+}
+
+// ===== HEX GRID =====
+function getGridDimensions(size) {
+  if (size === 'small') return { cols: 4, rows: 3 };
+  if (size === 'large') return { cols: 6, rows: 5 };
+  return { cols: 5, rows: 4 };
+}
+
+function hexPoints(cx, cy, size) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i);
+    pts.push(`${cx + size * Math.cos(angle)},${cy + size * Math.sin(angle)}`);
+  }
+  return pts.join(' ');
+}
+
+function buildHexGrid() {
+  const svg = document.getElementById('hexGrid');
+  svg.innerHTML = '';
+  const { cols, rows } = G.grid;
+
+  // Calculate hex size based on available space
+  const hexArea = document.querySelector('.hex-area');
+  const areaW = hexArea.clientWidth - 20;
+  const areaH = hexArea.clientHeight - 20;
+
+  // Flat-top hex: w = 2*size, h = sqrt(3)*size
+  // Grid width = size * (3/2 * (cols-1) + 2)
+  // Grid height = sqrt(3) * size * (rows + 0.5)
+  const maxSizeW = areaW / (1.5 * (cols - 1) + 2);
+  const maxSizeH = areaH / (Math.sqrt(3) * (rows + 0.5));
+  G.hexSize = Math.min(maxSizeW, maxSizeH, 70); // Fix #5: bigger hex for TV
+  const s = G.hexSize;
+
+  const gridW = s * (1.5 * (cols - 1) + 2);
+  const gridH = Math.sqrt(3) * s * (rows + 0.5);
+  const padX = s * 1.2;
+  const padY = s * 1.2;
+
+  svg.setAttribute('viewBox', `${-padX} ${-padY} ${gridW + padX * 2} ${gridH + padY * 2}`);
+  svg.setAttribute('width', Math.min(areaW, gridW + padX * 2));
+  svg.setAttribute('height', Math.min(areaH, gridH + padY * 2));
+
+  G.grid.cells = [];
+  let cellId = 0;
+
+  for (let col = 0; col < cols; col++) {
+    for (let row = 0; row < rows; row++) {
+      const cx = s + col * s * 1.5;
+      const cy = s * Math.sqrt(3) * (row + 0.5 * (col % 2)) + s * Math.sqrt(3) / 2;
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.classList.add('hex-cell', 'unclaimed');
+      g.dataset.id = cellId;
+      g.onclick = () => onHexClick(parseInt(g.dataset.id));
+
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', hexPoints(cx, cy, s * 0.92));
+      g.appendChild(poly);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.classList.add('hex-emoji');
+      text.setAttribute('x', cx);
+      text.setAttribute('y', cy + 7);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.textContent = '';
+      g.appendChild(text);
+
+      svg.appendChild(g);
+      G.grid.cells.push({ id: cellId, col, row, cx, cy, team: null, el: g });
+      cellId++;
+    }
+  }
+
+  G.totalTiles = G.grid.cells.length;
+}
+
+function onHexClick(cellId) {
+  if (G.state !== 'chooseTile') return;
+  const cell = G.grid.cells[cellId];
+  if (cell.team !== null) return;
+
+  // Claim tile
+  cell.team = G.buzzedTeam;
+  const team = G.teams[G.buzzedTeam];
+  const el = cell.el;
+
+  el.classList.remove('unclaimed', 'choosable');
+  el.classList.add('claimed', 'just-claimed');
+  el.querySelector('polygon').style.fill = team.color;
+  el.querySelector('polygon').style.stroke = team.color;
+  el.querySelector('polygon').style.fillOpacity = '0.6';
+
+  const emoji = team.emojis[Math.floor(Math.random() * team.emojis.length)];
+  el.querySelector('.hex-emoji').textContent = emoji;
+
+  // Remove choosable from all
+  document.querySelectorAll('.hex-cell.choosable').forEach(h => h.classList.remove('choosable'));
+
+  sfxClaim();
+  setTimeout(() => el.classList.remove('just-claimed'), 600);
+
+  updateScores();
+
+  // Check if all tiles claimed or questions done
+  const unclaimed = G.grid.cells.filter(c => c.team === null).length;
+  if (unclaimed === 0 || G.currentQ >= G.questions.length) {
+    setTimeout(() => endGame(), 800);
+  } else {
+    G.state = 'transition';
+    setTimeout(() => nextQuestion(), 1000);
+  }
+}
+
+// ===== SCORES =====
+function renderScoreBar() {
+  const container = document.getElementById('scoreTeams');
+  container.innerHTML = '';
+  G.teams.forEach((t, i) => {
+    const count = G.grid.cells.filter(c => c.team === i).length;
+    container.innerHTML += `
+      <div class="score-team" id="scoreTeam${i}" style="background:${t.bg};border:2px solid ${t.color}">
+        <span class="score-emoji">${t.emojis[0]}</span>
+        <span id="scoreCount${i}">${count}</span>
+      </div>`;
+  });
+}
+
+function updateScores() {
+  G.teams.forEach((t, i) => {
+    const count = G.grid.cells.filter(c => c.team === i).length;
+    const el = document.getElementById(`scoreCount${i}`);
+    if (el) el.textContent = count;
+  });
+}
+
+// ===== TIMER =====
+function startTimer() {
+  G.timerLeft = G.timerMax;
+  updateTimerDisplay();
+  clearInterval(G.timerInterval);
+  G.timerInterval = setInterval(() => {
+    G.timerLeft--;
+    updateTimerDisplay();
+    if (G.timerLeft <= 5 && G.timerLeft > 0) sfxTick();
+    if (G.timerLeft <= 0) {
+      clearInterval(G.timerInterval);
+      onTimeUp();
+    }
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(G.timerInterval); }
+
+function updateTimerDisplay() {
+  const el = document.getElementById('timerDisplay');
+  el.textContent = G.timerLeft;
+  el.classList.toggle('warning', G.timerLeft <= 5);
+}
+
+function onTimeUp() {
+  sfxTimeUp();
+  flashResult('⏰');
+  document.getElementById('statusLine').textContent = '⏰ หมดเวลา!';
+  // Show choices to reveal correct answer
+  document.getElementById('choices').classList.remove('hidden');
+  disableChoices();
+  disableBuzz();
+
+  // Show correct answer
+  showCorrectAnswer();
+
+  const unclaimed = G.grid.cells.filter(c => c.team === null).length;
+  if (G.currentQ >= G.questions.length || unclaimed === 0) {
+    setTimeout(() => endGame(), 1500);
+  } else {
+    setTimeout(() => nextQuestion(), 2000);
+  }
+}
+
+// ===== BUZZ =====
+function renderBuzzButtons() {
+  const container = document.getElementById('buzzRow');
+  container.innerHTML = '';
+  G.teams.forEach((t, i) => {
+    container.innerHTML += `
+      <button class="buzz-btn" id="buzzBtn${i}"
+        style="background:${t.bg};border-color:${t.color}"
+        onclick="onBuzz(${i})">
+        ${t.emojis[0]} ${t.name}
+      </button>`;
+  });
+}
+
+function onBuzz(teamIdx) {
+  if (G.state !== 'question') return;
+  if (G.triedTeams.has(teamIdx)) return;
+
+  G.state = 'answering';
+  G.buzzedTeam = teamIdx;
+  stopTimer();
+
+  sfxBuzz();
+  const team = G.teams[teamIdx];
+
+  // Highlight buzzed team in score bar
+  document.querySelectorAll('.score-team').forEach(el => el.classList.remove('active-team'));
+  document.getElementById(`scoreTeam${teamIdx}`).classList.add('active-team');
+
+  // Fix #11: Persistent buzz glow on active button
+  document.querySelectorAll('.buzz-btn').forEach(b => b.classList.remove('active-buzz'));
+  const btn = document.getElementById(`buzzBtn${teamIdx}`);
+  btn.classList.add('buzzing', 'active-buzz');
+  setTimeout(() => btn.classList.remove('buzzing'), 400);
+
+  document.getElementById('statusLine').innerHTML = `${team.emojis[0]} <span style="color:${team.color}">${team.name}</span> ตอบ!`;
+  disableBuzz();
+
+  // Fix #3: Show choices with slide-up
+  document.getElementById('choices').classList.remove('hidden');
+  enableChoices();
+}
+
+function disableBuzz() {
+  G.teams.forEach((_, i) => {
+    document.getElementById(`buzzBtn${i}`).disabled = true;
+  });
+}
+
+function enableBuzz() {
+  G.teams.forEach((_, i) => {
+    const btn = document.getElementById(`buzzBtn${i}`);
+    btn.disabled = G.triedTeams.has(i);
+  });
+}
+
+// ===== CHOICES =====
+function renderChoices(q) {
+  const container = document.getElementById('choices');
+  const labels = ['A', 'B', 'C', 'D'];
+  container.innerHTML = '';
+  container.classList.add('hidden'); // Fix #3: start hidden until buzz
+  q.choices.forEach((c, i) => {
+    container.innerHTML += `
+      <button class="choice-btn" id="choiceBtn${i}" onclick="onAnswer(${i})" disabled>
+        <span class="choice-label">${labels[i]}</span>
+        <span>${c}</span>
+      </button>`;
+  });
+}
+
+function enableChoices() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`choiceBtn${i}`).disabled = false;
+  }
+}
+
+function disableChoices() {
+  for (let i = 0; i < 4; i++) {
+    const btn = document.getElementById(`choiceBtn${i}`);
+    if (btn) btn.disabled = true;
+  }
+}
+
+function showCorrectAnswer() {
+  const q = G.questions[G.currentQ - 1];
+  if (!q) return;
+  const correctBtn = document.getElementById(`choiceBtn${q.answer}`);
+  if (correctBtn) correctBtn.classList.add('correct');
+}
+
+function onAnswer(choiceIdx) {
+  if (G.state !== 'answering') return;
+  disableChoices();
+
+  const q = G.questions[G.currentQ - 1];
+  const isCorrect = choiceIdx === q.answer;
+  const team = G.teams[G.buzzedTeam];
+
+  if (isCorrect) {
+    // CORRECT
+    sfxCorrect();
+    flashResult('✅');
+    document.getElementById(`choiceBtn${choiceIdx}`).classList.add('correct');
+    document.getElementById('statusLine').innerHTML =
+      `✅ ถูกต้อง! <span style="color:${team.color}">${team.name}</span> เลือกช่องที่จะยึด!`;
+
+    G.state = 'chooseTile';
+
+    // Make unclaimed hexes choosable
+    G.grid.cells.forEach(cell => {
+      if (cell.team === null) cell.el.classList.add('choosable');
+    });
+  } else {
+    // WRONG
+    sfxWrong();
+    flashResult('❌');
+    document.getElementById(`choiceBtn${choiceIdx}`).classList.add('wrong-pick');
+    G.triedTeams.add(G.buzzedTeam);
+
+    // Check if other teams can steal
+    const remainingTeams = G.teams.filter((_, i) => !G.triedTeams.has(i));
+    if (remainingTeams.length > 0) {
+      // Steal opportunity
+      sfxSteal();
+      G.state = 'question';
+      document.getElementById('statusLine').textContent = '🔄 ผิด! ทีมอื่นมีโอกาส Steal!';
+      document.getElementById('choices').classList.add('hidden'); // Hide choices for steal buzz
+      document.querySelectorAll('.buzz-btn').forEach(b => b.classList.remove('active-buzz'));
+      enableBuzz();
+      startTimer();
+    } else {
+      // All teams tried, skip
+      document.getElementById('statusLine').textContent = '💨 ทุกทีมตอบผิด — ข้ามข้อนี้';
+      document.getElementById('choices').classList.remove('hidden');
+      showCorrectAnswer();
+      const unclaimed = G.grid.cells.filter(c => c.team === null).length;
+      if (G.currentQ >= G.questions.length || unclaimed === 0) {
+        setTimeout(() => endGame(), 1500);
+      } else {
+        setTimeout(() => nextQuestion(), 2000);
+      }
+    }
+  }
+}
+
+// ===== QUESTION FLOW =====
+function nextQuestion() {
+  if (G.currentQ >= G.questions.length) {
+    endGame();
+    return;
+  }
+
+  const unclaimed = G.grid.cells.filter(c => c.team === null).length;
+  if (unclaimed === 0) {
+    endGame();
+    return;
+  }
+
+  const q = G.questions[G.currentQ];
+  G.currentQ++;
+  G.triedTeams.clear();
+  G.buzzedTeam = null;
+  G.state = 'question';
+
+  // Reset UI
+  document.querySelectorAll('.score-team').forEach(el => el.classList.remove('active-team'));
+  document.querySelectorAll('.buzz-btn').forEach(b => b.classList.remove('active-buzz'));
+  document.getElementById('qCounter').textContent = `คำถาม ${G.currentQ}/${G.questions.length}`;
+  document.getElementById('statusLine').textContent = '🔔 ทีมไหนพร้อม กดเลย!';
+  document.getElementById('questionText').textContent = `❓ ${q.question}`;
+
+  renderChoices(q);
+  enableBuzz();
+  startTimer();
+}
+
+// ===== GAME LIFECYCLE =====
+function startGame() {
+  // Parse setup
+  const teamCount = parseInt(document.getElementById('teamCount').value);
+  const questions = parseQuestions(document.getElementById('questionsRaw').value);
+
+  if (questions.length === 0) {
+    alert('กรุณาใส่คำถามอย่างน้อย 1 ข้อ');
+    return;
+  }
+
+  // Button animation
+  const btn = document.getElementById('gameBtn');
+  btn.classList.add('is-starting');
+  createBtnConfetti();
+  sfxBuzz();
+
+  // Build teams
+  G.teams = [];
+  for (let i = 0; i < teamCount; i++) {
+    const nameEl = document.getElementById(`teamName${i}`);
+    G.teams.push({
+      ...TEAMS_CONFIG[i],
+      name: nameEl ? nameEl.value || TEAMS_CONFIG[i].name : TEAMS_CONFIG[i].name,
+    });
+  }
+
+  G.questions = questions;
+  G.currentQ = 0;
+  G.timerMax = parseInt(document.getElementById('timerSec').value);
+
+  // Grid
+  const gridSize = document.getElementById('gridSize').value;
+  const dim = getGridDimensions(gridSize);
+  G.grid.cols = dim.cols;
+  G.grid.rows = dim.rows;
+
+  // Transition
+  setTimeout(() => {
+    showScreen('screen-game');
+    btn.classList.remove('is-starting');
+    buildHexGrid();
+    renderScoreBar();
+    renderBuzzButtons();
+    runCountdown();
+  }, 800);
+}
+
+function runCountdown() {
+  showOverlay('overlay-countdown');
+  const el = document.getElementById('countdown-text');
+  let count = 3;
+  el.textContent = count;
+  sfxCountdown();
+
+  const iv = setInterval(() => {
+    count--;
+    if (count > 0) {
+      el.textContent = count;
+      el.style.animation = 'none'; el.offsetHeight; el.style.animation = '';
+      sfxCountdown();
+    } else {
+      el.textContent = 'GO!';
+      el.style.animation = 'none'; el.offsetHeight; el.style.animation = '';
+      el.style.color = 'var(--correct)';
+      sfxGo();
+      clearInterval(iv);
+      setTimeout(() => {
+        hideOverlay('overlay-countdown');
+        el.style.color = 'var(--gold)';
+        nextQuestion();
+      }, 600);
+    }
+  }, 800);
+}
+
+function endGame() {
+  G.state = 'gameOver';
+  stopTimer();
+
+  // Count tiles per team
+  const counts = G.teams.map((_, i) => G.grid.cells.filter(c => c.team === i).length);
+  const maxCount = Math.max(...counts);
+  const winners = counts.reduce((arr, c, i) => { if (c === maxCount) arr.push(i); return arr; }, []);
+
+  // Render game over
+  const winnerTeam = G.teams[winners[0]];
+  const winnerEl = document.getElementById('winnerName');
+  if (winners.length === 1) {
+    winnerEl.innerHTML = `<span style="color:${winnerTeam.color}">${winnerTeam.emojis[0]} ${winnerTeam.name}</span> ชนะ!`;
+  } else {
+    winnerEl.innerHTML = `เสมอ! ${winners.map(i => `<span style="color:${G.teams[i].color}">${G.teams[i].emojis[0]} ${G.teams[i].name}</span>`).join(' & ')}`;
+  }
+
+  const scoresContainer = document.getElementById('finalScores');
+  scoresContainer.innerHTML = '';
+  G.teams.forEach((t, i) => {
+    const isWinner = winners.includes(i);
+    scoresContainer.innerHTML += `
+      <div class="final-score-card ${isWinner ? 'winner-card' : ''}" style="border-color:${t.color};background:${t.bg}">
+        <div class="fs-emoji">${t.emojis[0]}</div>
+        <div class="fs-name" style="color:${t.color}">${t.name}</div>
+        <div class="fs-count" style="color:${t.color}">${counts[i]}</div>
+      </div>`;
+  });
+
+  showOverlay('overlay-gameover');
+  sfxWin();
+  launchConfetti();
+  setTimeout(() => launchConfetti(), 2000);
+}
+
+function backToSetup() {
+  hideOverlay('overlay-gameover');
+  showScreen('screen-setup');
+  G.state = 'setup';
+}
+
+// ===== KEYBOARD SHORTCUTS =====
+document.addEventListener('keydown', (e) => {
+  if (G.state === 'setup') return;
+
+  // Escape → back to setup
+  if (e.key === 'Escape') {
+    if (confirm('กลับหน้าตั้งค่า?')) {
+      stopTimer();
+      hideOverlay('overlay-gameover');
+      hideOverlay('overlay-countdown');
+      backToSetup();
+    }
+    return;
+  }
+
+  // Team buzz: 1-4
+  if (G.state === 'question' && e.key >= '1' && e.key <= '4') {
+    const teamIdx = parseInt(e.key) - 1;
+    if (teamIdx < G.teams.length) onBuzz(teamIdx);
+  }
+
+  // Answer: A-D
+  if (G.state === 'answering') {
+    const map = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+    if (map[e.key] !== undefined) onAnswer(map[e.key]);
+  }
+});
+
+// ===== RESIZE =====
+window.addEventListener('resize', () => {
+  if (G.state !== 'setup' && G.state !== 'gameOver') {
+    // Rebuild hex grid on resize to maintain proper sizing
+    const savedCells = G.grid.cells.map(c => ({ team: c.team }));
+    buildHexGrid();
+    // Restore claimed state
+    G.grid.cells.forEach((cell, i) => {
+      if (savedCells[i] && savedCells[i].team !== null) {
+        const teamIdx = savedCells[i].team;
+        cell.team = teamIdx;
+        const team = G.teams[teamIdx];
+        cell.el.classList.remove('unclaimed');
+        cell.el.classList.add('claimed');
+        cell.el.querySelector('polygon').style.fill = team.color;
+        cell.el.querySelector('polygon').style.stroke = team.color;
+        cell.el.querySelector('polygon').style.fillOpacity = '0.6';
+        const emoji = team.emojis[Math.floor(Math.random() * team.emojis.length)];
+        cell.el.querySelector('.hex-emoji').textContent = emoji;
+      }
+    });
+    // Re-apply choosable state if in chooseTile
+    if (G.state === 'chooseTile') {
+      G.grid.cells.forEach(cell => {
+        if (cell.team === null) cell.el.classList.add('choosable');
+      });
+    }
+    updateScores();
+  }
+});
+
+// ===== INIT =====
+initStars();
+updateTeamInputs();
+// Load default pack
+const defaultPackBtn = document.querySelector('.pack-btn');
+loadPack('social', defaultPackBtn);
+</script>
+</body>
+</html>
